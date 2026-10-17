@@ -1,6 +1,165 @@
-# Family Story
+# Fireside
 
-Storytellers record short voice memos; AI places them on their life timeline and stitches them into chapters their family can read. Demo mode: one shared bucket of memos, no family accounts.
+**Family stories disappear with the people who lived them. Fireside turns a parent's quick voice memos into a connected life story their kids can actually read.**
+
+Memories don't come back in chapters. They come back in fragments, while cooking or driving. Fireside lets a parent or grandparent tap and talk for a minute whenever a memory hits, in whatever language they think in. AI places each fragment on their life timeline, connects it to the people it mentions, and stitches related memos into chapters written in their own words.
+
+Built at [hackathon name] · October 2026
+
+---
+
+## How it works
+
+1. **Life map.** The storyteller fills out a short timeline once: where they lived, when, and with whom. This becomes the skeleton every memory attaches to.
+2. **Record.** One tap, talk for as long as they like. Mandarin, English, or both in the same sentence.
+3. **Transcribe and place.** Each memo is transcribed, then tagged with a life stage, people, places, and a year range.
+4. **Stitch.** Related memos become a chapter that quotes the storyteller directly and links every sentence back to the original audio.
+5. **Review.** Nothing is shared until the storyteller approves, edits, or hides it.
+6. **Read.** Family members read approved chapters in order, with the original voice playable under each passage.
+
+## Pages
+
+| Page | What it does |
+|---|---|
+| Life Map | Onboarding: life stages and the family roster |
+| Record | One-tap voice recording and a list of past recordings |
+| Memories | All memos with transcripts and tags |
+| Review | Storyteller approves, edits, or hides chapters |
+| Read | Book-style reader for family members |
+| QR | Invite code for relatives to join |
+
+## Tech stack
+
+- **Frontend:** React + Vite (TypeScript)
+- **Backend:** FastAPI (Python)
+- **Database:** Supabase Postgres
+- **File storage:** Supabase Storage (audio)
+- **AI:** OpenAI Whisper for transcription, LLM calls for tagging and chapter writing
+
+```
+Browser (React + Vite)
+   │  /api/*  (Vite dev proxy)
+   ▼
+FastAPI backend ──► ai.py (Whisper + LLM)
+   │
+   ├──► Supabase Postgres  (life stages, people, memos, chapters)
+   └──► Supabase Storage   (audio files) ──► played directly by the browser
+```
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 18+
+- Python 3.11+
+- A Supabase project
+- An OpenAI API key
+
+### 1. Clone and install the frontend
+
+```bash
+git clone <repo-url>
+cd dt-hackathon
+npm install
+```
+
+### 2. Set up the backend
+
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate        # Windows (Git Bash): source venv/Scripts/activate
+pip install -r requirements.txt
+```
+
+Create `backend/.env`:
+
+```
+SUPABASE_URL=your-project-url
+SUPABASE_SERVICE_KEY=your-service-role-key
+OPENAI_API_KEY=your-openai-key
+```
+
+Frontend environment variables go in the repo root `.env`. See `.env.example` for the names.
+
+> **Never commit `.env` files.** The service-role key bypasses all Supabase security rules and must stay on the backend.
+
+### 3. Set up Supabase
+
+Run this in the Supabase SQL editor:
+
+```sql
+create table life_stages (
+  id serial primary key, label text, place text,
+  start_year int, end_year int, notes text
+);
+create table people (
+  id serial primary key, name text, nickname text, relationship text
+);
+create table memos (
+  id serial primary key, audio_url text, transcript text,
+  tags jsonb, stage_id int references life_stages(id),
+  created_at timestamptz default now()
+);
+create table chapters (
+  id serial primary key, stage_id int references life_stages(id),
+  title text, body jsonb, status text default 'draft'
+);
+```
+
+Then create a **public** Storage bucket named `memos`.
+
+### 4. Run it
+
+In one terminal (from `backend/`):
+
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+In another (from the repo root):
+
+```bash
+npm run dev
+```
+
+Open the URL Vite prints. The dev server uses a self-signed HTTPS certificate so microphone access works, so your browser will show a warning the first time. Click through it.
+
+API docs are at `http://localhost:8000/docs`.
+
+## API
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET / POST | `/api/life-map` | Read or save life stages |
+| GET / POST | `/api/people` | Read or save the family roster |
+| POST | `/api/memos` | Upload audio; transcribes and tags it |
+| GET | `/api/memos` | List memos |
+| POST | `/api/chapters/generate?stage_id=` | Draft a chapter from a stage's memos |
+| PATCH | `/api/chapters/{id}` | Approve, hide, or edit a chapter |
+| GET | `/api/chapters` | List chapters (filter by `status`) |
+
+## Design principles
+
+- **Fragments are enough.** A 90-second memo is a complete contribution.
+- **Her voice, not the AI's.** Chapters quote the storyteller directly. The AI only adds connecting sentences and never invents events, names, or dates.
+- **The storyteller controls the truth.** Every chapter is reviewed before anyone else sees it.
+- **Sensitive by default.** Family stories involve arrests, illnesses, and feuds, so nothing is shared without consent.
+
+## What's next
+
+- Gap-filling prompts ("Nothing yet about 1980–1985")
+- Reader questions that become the storyteller's next prompt
+- Translation: read in English, listen in Mandarin or Taiwanese
+- Multi-teller stories, with siblings adding their version of the same event
+- Per-chapter audiences, including time-locked releases for future generations
+
+## Team
+
+- [Name] — Backend
+- [Name] — AI pipeline
+- [Name] — Frontend and product
+- [Name] — Content, prompts, and pitch
 
 ## Run it (Mac)
 
