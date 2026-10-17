@@ -1,32 +1,34 @@
-# React + TypeScript + Vite
+# Family Story
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Storytellers record short voice memos; AI places them on their life timeline and stitches them into chapters their family can read. Demo mode: one shared bucket of memos, no family accounts.
 
-Currently, two official plugins are available:
+## Run it
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+**Backend** (FastAPI, port 8000):
+```bash
+cd backend
+python3 -m venv venv && venv/bin/pip install -r requirements.txt
+cp .env.example .env        # SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY
+venv/bin/uvicorn main:app --reload
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+**Frontend** (Vite, port 5173, proxies `/api` → backend):
+```bash
+npm install                 # .npmrc sets legacy-peer-deps
+npm run dev                 # laptop only
+npm run dev:phone           # HTTPS on your Wi-Fi IP so phones can scan the QR and use the mic
+```
+
+Demo: open `/qr` on the laptop, scan with a phone → `/r` → record → it shows up placed on the timeline in the live feed.
+
+## AI pipeline (`backend/ai.py`, one `OPENAI_API_KEY`)
+
+| Function | Does |
+|---|---|
+| `transcribe(data, filename, people)` | gpt-4o-transcribe → transcript in her own language(s), roster names as spelling hints |
+| `tag_memo(transcript, life_map, people)` | → `{stage_id, people, themes, summary, place, year_start, year_end, year_is_estimate, unmatched_people, tone, sensitive, sensitivity_reason}` stored in `memos.tags` |
+| `write_chapter(stage, memos)` | → `{title, body}`; `body = {passages: [{text, memoId, memoIds, kind, uncertain}], yearRange, openQuestions, sensitive}` |
+
+`passages[].memoId` matches the frontend's `Passage` type. `kind` is `quote` (her words), `narration`, or `connective` (AI-added context). Without `OPENAI_API_KEY` the functions fall back to stubs.
+
+Optional env: `OPENAI_MODEL` (default `gpt-4.1`), `OPENAI_TRANSCRIBE_MODEL` (default `gpt-4o-transcribe`).
