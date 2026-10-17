@@ -35,6 +35,33 @@ export async function joinFamily(familyId: string, name: string, role: Role = 'r
   return data
 }
 
+/** Base URL a phone can reach: VITE_PUBLIC_URL if set, else the laptop's Wi-Fi IP instead of localhost. */
+export function publicBaseUrl() {
+  const configured = import.meta.env.VITE_PUBLIC_URL as string | undefined
+  if (configured) return configured.replace(/\/$/, '')
+  const { protocol, hostname, port, origin } = window.location
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1'
+  if (isLocal && __LAN_IP__) return `${protocol}//${__LAN_IP__}${port ? `:${port}` : ''}`
+  return origin
+}
+
 export function inviteUrl(familyId: string) {
-  return `${window.location.origin}/join/${familyId}`
+  return `${publicBaseUrl()}/join/${familyId}`
+}
+
+export async function createFamily(input: {
+  familyName: string
+  storytellerName: string
+  birthYear: number | null
+  organizerName: string
+}) {
+  const { data: family, error } = await supabase
+    .from('families')
+    .insert({ name: input.familyName, storyteller_name: input.storytellerName, birth_year: input.birthYear })
+    .select()
+    .single()
+  if (error) throw error
+  // Whoever creates the family joins it as organizer.
+  await joinFamily(family.id, input.organizerName, 'organizer')
+  return family
 }
