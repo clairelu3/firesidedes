@@ -7,7 +7,14 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:phone": "HTTPS=1 vite",
+    "setup": "bash scripts/setup.sh",
+    "start": "bash scripts/start.sh",
+    "start:phone": "HTTPS=1 bash scripts/start.sh",
+    "backend": "cd backend && venv/bin/uvicorn main:app --reload --host 127.0.0.1 --port 8000",
+    "check-env": "bash scripts/check-env.sh",
+    "tunnel": "cloudflared tunnel --no-autoupdate --url http://localhost:5173"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -23,9 +30,13 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
   }
 }

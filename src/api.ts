@@ -11,11 +11,13 @@ import type {
   LifeMap,
   LifeStage,
   Memo,
+  MemoTags,
   Passage,
   Person,
+  Storybook,
 } from './types'
 
-const MEMOS_BUCKET = 'memos'
+// Memo audio is uploaded by the backend (POST /api/memos), so there's no memos bucket constant here.
 const FAMILY_PHOTOS_BUCKET = 'family-photos'
 const STORYTELLER_KEY = 'fireside-storyteller'
 
@@ -28,7 +30,14 @@ type LifeStageRow = {
   notes: string | null
 }
 type PersonRow = { id: number; name: string | null; nickname: string | null; relationship: string | null }
-type MemoRow = { id: number; audio_url: string | null; transcript: string | null; created_at: string }
+type MemoRow = {
+  id: number
+  audio_url: string | null
+  transcript: string | null
+  created_at: string
+  stage_id?: number | null
+  tags?: MemoTags | null
+}
 type ChapterRow = { id: number; stage_id: number | null; title: string | null; body: unknown; status: string | null }
 
 // --- mapping helpers ---
@@ -71,6 +80,8 @@ function toMemo(row: MemoRow): Memo {
     audioUrl: row.audio_url ?? '',
     transcript: row.transcript ?? undefined,
     createdAt: row.created_at,
+    stageId: row.stage_id == null ? undefined : String(row.stage_id),
+    tags: row.tags ?? undefined,
   }
 }
 
@@ -176,25 +187,29 @@ export async function getLifeMap(): Promise<LifeMap | null> {
   }
 }
 
+// Goes through the FastAPI backend so the memo gets transcribed (Whisper) and tagged before it's saved.
 export async function uploadMemo(blob: Blob): Promise<Memo> {
   const contentType = blob.type.split(';')[0].trim() || 'audio/webm'
-  const ext = contentType.includes('mp4') ? 'm4a' : 'webm'
-  const path = `${crypto.randomUUID()}.${ext}`
+  const ext = contentType.includes('mp4') ? 'm4a' : contentType.includes('ogg') ? 'ogg' : 'webm'
+  const form = new FormData()
+  form.append('file', blob, `memo.${ext}`)
+  const res = await fetch('/api/memos', { method: 'POST', body: form })
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? `Upload failed (${res.status})`)
+  return toMemo((await res.json()) as MemoRow)
+}
 
-  const { error: uploadError } = await supabase.storage
-    .from(MEMOS_BUCKET)
-    .upload(path, blob, { contentType })
-  if (uploadError) throw uploadError
+/** Storytime: one memo as a rhyming kids' picture book. Cached on the memo; regenerate makes a new version. */
+export async function makeStorybook(memoId: string, regenerate = false): Promise<Storybook> {
+  const res = await fetch(`/api/memos/${encodeURIComponent(memoId)}/storybook?regenerate=${regenerate}`, { method: 'POST' })
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? `Storytime failed (${res.status})`)
+  return res.json()
+}
 
-  const { data: urlData } = supabase.storage.from(MEMOS_BUCKET).getPublicUrl(path)
-
-  const { data, error } = await supabase
-    .from('memos')
-    .insert({ audio_url: urlData.publicUrl })
-    .select()
-    .single()
-  if (error) throw error
-  return toMemo(data as MemoRow)
+/** AI writes a draft chapter from every memo placed in this life stage. */
+export async function generateChapter(stageId: string): Promise<Chapter> {
+  const res = await fetch(`/api/chapters/generate?stage_id=${encodeURIComponent(stageId)}`, { method: 'POST' })
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? `Chapter failed (${res.status})`)
+  return toChapter((await res.json()) as ChapterRow)
 }
 
 export async function listMemos(): Promise<Memo[]> {

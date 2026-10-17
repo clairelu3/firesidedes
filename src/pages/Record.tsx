@@ -13,6 +13,7 @@ type Phase = 'idle' | 'recording' | 'uploading'
 const VISIBLE_MEMOS = 3
 
 export default function Record() {
+  // 'uploading' covers Kenza's `saving` state: the backend transcribes and places the memo.
   const [phase, setPhase] = useState<Phase>('idle')
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -58,7 +59,8 @@ export default function Record() {
           setMemos(await listMemos())
         } catch (err) {
           console.error(err)
-          setError('We couldn’t save that recording. Please try again.')
+          // Keep the backend's reason (e.g. missing API key) so it's easy to debug.
+          setError(`We couldn’t save that recording: ${err instanceof Error ? err.message : err}`)
         } finally {
           setPhase('idle')
         }
@@ -126,8 +128,8 @@ export default function Record() {
           )}
           {phase === 'uploading' && (
             <>
-              <p className="text-lg font-bold text-ink">Uploading…</p>
-              <p className="mt-1 text-base text-muted">This only takes a moment.</p>
+              <p className="text-lg font-bold text-ink">Listening…</p>
+              <p className="mt-1 text-base text-muted">Placing it on your timeline. This can take a moment.</p>
             </>
           )}
         </div>
@@ -201,9 +203,11 @@ function MemoRow({ memo, active, onActivate }: { memo: Memo; active: boolean; on
 
   const title = memoTitle(memo.transcript, memo.createdAt)
   const length = formatDuration(duration)
+  const english = memo.tags?.transcript_en?.trim()
+  const showEnglish = english && english !== memo.transcript?.trim()
 
   return (
-    <li className="flex h-20 items-center gap-2 pr-2 pl-4">
+    <li className="flex min-h-20 items-center gap-2 py-3 pr-2 pl-4">
       {memo.audioUrl && <audio ref={ref} src={memo.audioUrl} preload="metadata" />}
       <button
         type="button"
@@ -213,13 +217,14 @@ function MemoRow({ memo, active, onActivate }: { memo: Memo; active: boolean; on
         }}
         disabled={!memo.audioUrl}
         aria-label={`${playing ? 'Pause' : 'Play'} ${title}`}
-        className="flex h-full min-w-0 flex-1 items-center gap-4 text-left"
+        className="flex min-w-0 flex-1 items-center gap-4 self-stretch text-left"
       >
         <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-field text-ember">
           {playing ? <Pause size={20} fill="currentColor" aria-hidden="true" /> : <Play size={20} fill="currentColor" className="ml-0.5" aria-hidden="true" />}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[17px] font-bold text-ink">{title}</span>
+          {showEnglish && <span className="block truncate text-sm italic text-ink/70">English: {english}</span>}
           <span className="block truncate text-sm text-muted">
             {formatMemoDate(memo.createdAt)}
             {length && ` · ${length}`}
