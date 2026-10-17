@@ -1,5 +1,6 @@
-import { ChevronRight, Clock, Ellipsis, LoaderCircle, Mic, Pause, Play, Square } from 'lucide-react'
+import { ChevronRight, Clock, LoaderCircle, Mic, Pause, Play, Sparkles, Square } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { getLifeMap, getMyName, listMemos, uploadMemo } from '../api'
 import { AppShell } from '../components/ui/AppShell'
 import { Card } from '../components/ui/Card'
@@ -231,9 +232,16 @@ function MemoRow({ memo, active, onActivate }: { memo: Memo; active: boolean; on
           </span>
         </span>
       </button>
-      <span className="flex size-10 shrink-0 items-center justify-center text-muted" aria-hidden="true">
-        <Ellipsis size={22} />
-      </span>
+      {memo.transcript && !memo.transcript.startsWith('[stub') && !memo.tags?.sensitive && (
+        <Link
+          to={`/storytime/${memo.id}`}
+          aria-label={`Storytime: make ${title} into a kids' storybook`}
+          title="Storytime"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full text-ember hover:bg-ember-tint/60"
+        >
+          <Sparkles size={22} aria-hidden="true" />
+        </Link>
+      )}
     </li>
   )
 }

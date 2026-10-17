@@ -19,6 +19,7 @@ export default function App() {
       <Route path="/record" element={<Record />} />
       <Route path="/chapters" element={<Chapters />} />
       <Route path="/book" element={<Book />} />
+      <Route path="/storytime/:memoId" element={<Storytime />} />
 
       {/* Phone page the QR code opens: no nav, just the record button. */}
       <Route path="/r" element={<PhoneRecord />} />
@@ -27,7 +28,6 @@ export default function App() {
       <Route element={<LegacyLayout />}>
         <Route path="/memories" element={<Memories />} />
         <Route path="/qr" element={<QRPage />} />
-        <Route path="/storytime/:memoId" element={<Storytime />} />
       </Route>
 
       {/* old routes */}
