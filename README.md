@@ -1,32 +1,33 @@
-# React + TypeScript + Vite
+# Family Story
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Storytellers record short voice memos; AI places them on their life timeline and stitches them into chapters their family can read.
 
-Currently, two official plugins are available:
+## Setup (5 min)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. `npm install` (an `.npmrc` sets `legacy-peer-deps`; if `npm run dev` complains about a missing native binding, delete `node_modules` + `package-lock.json` and reinstall)
+2. Supabase project → **SQL Editor** → run `supabase/schema.sql`, then `supabase/seed.sql` (demo family)
+3. `cp .env.example .env.local` and fill in the Supabase URL + anon key
+4. Deploy the AI functions (once, by whoever has the Anthropic key):
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref <your-project-ref>
+   npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+   npx supabase functions deploy process-memo --no-verify-jwt
+   npx supabase functions deploy stitch-chapter --no-verify-jwt
+   ```
+5. `npm run dev`
 
-## React Compiler
+Demo: open `/invite/00000000-0000-0000-0000-000000000001` on a laptop and scan with a phone. Phones only allow the mic on **HTTPS**, so use the deployed (Vercel) URL or a tunnel, not your LAN IP.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## How the pieces fit
 
-## Expanding the Oxlint configuration
+| Piece | Where | What |
+|---|---|---|
+| Schema + types | `supabase/schema.sql`, `src/lib/types.ts` | families, members, life_stages, people, memos, chapters; `audio` storage bucket |
+| QR → join → record | `src/pages/JoinRecord.tsx`, `src/components/FamilyQR.tsx` | `/join/:familyId` joins the family if you're new, then shows the record button |
+| Recorder | `src/lib/useRecorder.ts` | MediaRecorder + live browser transcription (Web Speech API) |
+| AI: tag a memo | `supabase/functions/process-memo` | transcript + life map + roster → life stage, people, place, years, sensitivity |
+| AI: write a chapter | `supabase/functions/stitch-chapter` | tagged memos for one life stage → chapter where every sentence cites its memos |
+| Client calls | `src/lib/ai.ts` | `processMemo(memoId)`, `stitchChapter(familyId, lifeStageId)` |
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Chapter shape (for the review + reader screens): `chapter.sentences = [{ text, memo_ids, kind: 'quote' | 'narration' | 'connective', uncertain }]`, plus `open_questions` (contradictions to ask her about), `status` (`draft` / `approved` / `hidden`) and `audience`. Approved chapters are locked; `stitchChapter` returns them unchanged unless `force` is true.
