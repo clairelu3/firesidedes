@@ -32,6 +32,44 @@ FONT_DIR = "/System/Library/Fonts"
 TEXT_FONT = f"{FONT_DIR}/Supplemental/ChalkboardSE.ttc"
 CJK_FONT = f"{FONT_DIR}/STHeiti Medium.ttc"
 
+# Style knobs (set by apply_style before a render)
+EYE = (36, 33, 25)  # eyes/smiles stay dark in every style
+TEXT, NATIVE = INK, WASH["deep"]
+LINE, JITTER, SOFT, BOB = 1.0, 1.0, 1.0, 12
+SUN, STARS, PITCH = "sun", False, 1.0
+
+_BASE = dict(PAPER=PAPER, INK=INK, WASH=dict(WASH), PAGE_WASHES=list(PAGE_WASHES), TEXT_FONT=TEXT_FONT)
+STYLES = {
+    # derived from the 15 watercolor references
+    "watercolor": {},
+    # night-blue paper, cream ink, stars, moon, lower and softer music
+    "bedtime": dict(
+        PAPER=(31, 42, 68), INK=(246, 239, 224), TEXT=(246, 239, 224), NATIVE=(186, 208, 230),
+        WASH={**_BASE["WASH"], "sky": (92, 128, 176), "deep": (60, 78, 128), "sand": (150, 132, 170), "peach": (196, 140, 150), "lav": (130, 118, 180)},
+        PAGE_WASHES=[("deep", "lav"), ("sky", "sand"), ("lav", "deep"), ("sand", "sky"), ("deep", "peach"), ("lav", "sky")],
+        SUN="moon", STARS=True, PITCH=0.75, BOB=8,
+    ),
+    # bright, bold and bouncy: thick wobbly outlines, crisper fills, marker lettering
+    "crayon": dict(
+        PAPER=(252, 251, 247), INK=(30, 30, 40), TEXT=(30, 30, 40), NATIVE=(214, 74, 60),
+        WASH={**_BASE["WASH"], "sky": (64, 160, 230), "rose": (236, 84, 96), "mustard": (250, 196, 40), "leaf": (90, 190, 90), "peach": (250, 150, 110), "deep": (50, 90, 200)},
+        TEXT_FONT=f"{FONT_DIR}/Supplemental/MarkerFelt.ttc", LINE=2.2, JITTER=2.6, SOFT=0.35, BOB=22, PITCH=1.12,
+    ),
+}
+PACES = {"calm": (3.4, 6.2, 3.6, 0.8), "normal": (3.0, 4.8, 3.2, 0.45), "lively": (2.6, 3.8, 2.8, 0.38)}
+
+
+def apply_style(style="watercolor", pace="normal"):
+    """Set the module-level look + timing for the next render."""
+    global PAPER, INK, WASH, PAGE_WASHES, TEXT_FONT, TEXT, NATIVE, LINE, JITTER, SOFT, BOB, SUN, STARS, PITCH, _grain
+    global TITLE_DUR, PAGE_DUR, OUTRO_DUR, TURN
+    cfg = {**_BASE, "TEXT": None, "NATIVE": None, "LINE": 1.0, "JITTER": 1.0, "SOFT": 1.0, "BOB": 12, "SUN": "sun", "STARS": False, "PITCH": 1.0, **STYLES.get(style, {})}
+    PAPER, INK, WASH, PAGE_WASHES, TEXT_FONT = cfg["PAPER"], cfg["INK"], cfg["WASH"], cfg["PAGE_WASHES"], cfg["TEXT_FONT"]
+    TEXT, NATIVE = cfg["TEXT"] or INK, cfg["NATIVE"] or WASH["deep"]
+    LINE, JITTER, SOFT, BOB, SUN, STARS, PITCH = cfg["LINE"], cfg["JITTER"], cfg["SOFT"], cfg["BOB"], cfg["SUN"], cfg["STARS"], cfg["PITCH"]
+    TITLE_DUR, PAGE_DUR, OUTRO_DUR, TURN = PACES.get(pace, PACES["normal"])
+    _grain = None
+
 
 def _font(path, size, fallback="/System/Library/Fonts/Supplemental/Georgia.ttf"):
     try:
@@ -91,7 +129,7 @@ def wash_layer(size, color, seed, cx, cy, r, alpha=150, squash=1.0):
     w, h = size
     mask = Image.new("L", size, 0)
     ImageDraw.Draw(mask).polygon(_blob_points(cx, cy, r, rng, 0.22, 64, squash), fill=255)
-    mask = mask.filter(ImageFilter.GaussianBlur(r * 0.06 + 2))
+    mask = mask.filter(ImageFilter.GaussianBlur((r * 0.06 + 2) * SOFT))
     rim = ImageChops.subtract(mask, mask.filter(ImageFilter.GaussianBlur(r * 0.12 + 3)))
     m = np.asarray(mask, np.float32) / 255
     g = rng.normal(0, 1, (h // 4 + 1, w // 4 + 1)).astype(np.float32)
@@ -104,6 +142,7 @@ def wash_layer(size, color, seed, cx, cy, r, alpha=150, squash=1.0):
 
 
 def ink_path(draw, pts, rng, width=3, closed=True, jitter=1.6):
+    jitter *= JITTER
     pts = [(x + rng.normal(0, jitter), y + rng.normal(0, jitter)) for x, y in pts]
     if closed:
         pts = pts + pts[:1]
@@ -113,13 +152,13 @@ def ink_path(draw, pts, rng, width=3, closed=True, jitter=1.6):
 def face(draw, cx, cy, s, rng, mood="smile"):
     ex = s * 0.28
     for sx in (-1, 1):
-        draw.ellipse([cx + sx * ex - s * 0.07, cy - s * 0.09, cx + sx * ex + s * 0.07, cy + s * 0.05], fill=INK + (255,))
+        draw.ellipse([cx + sx * ex - s * 0.07, cy - s * 0.09, cx + sx * ex + s * 0.07, cy + s * 0.05], fill=EYE + (255,))
         draw.ellipse([cx + sx * ex - s * 0.025, cy - s * 0.06, cx + sx * ex + s * 0.01, cy - s * 0.025], fill=(255, 255, 255, 230))
         draw.ellipse([cx + sx * (ex + s * 0.1) - s * 0.09, cy + s * 0.08, cx + sx * (ex + s * 0.1) + s * 0.09, cy + s * 0.16], fill=WASH["rose"] + (110,))
     if mood == "smile":
-        draw.arc([cx - s * 0.13, cy + s * 0.02, cx + s * 0.13, cy + s * 0.2], 15, 165, fill=INK + (255,), width=max(2, int(s * 0.035)))
+        draw.arc([cx - s * 0.13, cy + s * 0.02, cx + s * 0.13, cy + s * 0.2], 15, 165, fill=EYE + (255,), width=max(2, int(s * 0.035)))
     else:
-        draw.arc([cx - s * 0.1, cy + s * 0.14, cx + s * 0.1, cy + s * 0.26], 200, 340, fill=INK + (255,), width=max(2, int(s * 0.035)))
+        draw.arc([cx - s * 0.1, cy + s * 0.14, cx + s * 0.1, cy + s * 0.26], 200, 340, fill=EYE + (255,), width=max(2, int(s * 0.035)))
 
 
 # ---------- motifs: original characters/objects in the reference style ----------
@@ -136,7 +175,7 @@ def motif(kind, s, seed, boil):
     def fill(color, cx, cy, r, squash=1.0, alpha=200):
         img.alpha_composite(wash_layer((s, s), color, seed + int(r), cx, cy, r, alpha, squash))
     d = ImageDraw.Draw(img)
-    lw = max(2, s // 90)
+    lw = max(2, int(s / 90 * LINE))
 
     if kind in ("kid", "grandma", "mom", "brother", "cousins"):
         col = {"kid": "sand", "grandma": "peach", "mom": "rose", "brother": "sky", "cousins": "leaf"}[kind]
@@ -163,6 +202,14 @@ def motif(kind, s, seed, boil):
         fill(WASH["mustard"], c, c, s * 0.25)
         ink_path(d, _blob_points(c, c, s * 0.24, np.random.default_rng(seed), 0.05, 36), rng, lw)
         face(d, c, c, s * 0.32, rng)
+    elif kind == "moon":
+        fill(WASH.get("sand", (226, 188, 156)), c, c, s * 0.27)
+        cut = Image.new("L", (s, s), 0)
+        ImageDraw.Draw(cut).ellipse([c - s * 0.1, c - s * 0.36, c + s * 0.42, c + s * 0.2], fill=255)
+        img.putalpha(ImageChops.subtract(img.getchannel("A"), cut))
+        d = ImageDraw.Draw(img)
+        ink_path(d, _blob_points(c, c, s * 0.26, np.random.default_rng(seed), 0.03, 36), rng, lw)
+        face(d, c - s * 0.1, c + s * 0.04, s * 0.26, rng)
     elif kind == "mango":
         fill(WASH["mustard"], c, c * 1.05, s * 0.28, 1.2)
         fill(WASH["peach"], c + s * 0.08, c * 1.15, s * 0.16, 1.1, 150)
@@ -303,15 +350,15 @@ class Card:
         self.lines, self.native = [], None
         if kind == "title":
             self.kicker = text_sprite(["S T O R Y T I M E"], _font(TEXT_FONT, 30), WASH["rose"], 38)
-            self.lines = [text_sprite([l], f_title, INK, 84) for l in wrap(scratch, title, f_title, W - 140)]
-            self.actors = ["sun", pick_motifs(title + " " + illustration)[0]]
+            self.lines = [text_sprite([l], f_title, TEXT, 84) for l in wrap(scratch, title, f_title, W - 140)]
+            self.actors = [SUN, pick_motifs(title + " " + illustration)[0]]
         elif kind == "outro":
-            self.lines = [text_sprite(["Told by Grandma"], f_title, INK, 84), text_sprite(["fireside"], _font(TEXT_FONT, 34), WASH["rose"], 40)]
+            self.lines = [text_sprite(["Told by Grandma"], f_title, TEXT, 84), text_sprite(["fireside"], _font(TEXT_FONT, 34), WASH["rose"], 40)]
             self.actors = ["grandma", "heart"]
         else:
-            self.lines = [text_sprite([l], f_text, INK, 64) for l in wrap(scratch, text, f_text, W - 130)]
+            self.lines = [text_sprite([l], f_text, TEXT, 64) for l in wrap(scratch, text, f_text, W - 130)]
             if native:
-                self.native = text_sprite(wrap_cjk(scratch, native, f_cjk, W - 140), f_cjk, WASH["deep"], 54)
+                self.native = text_sprite(wrap_cjk(scratch, native, f_cjk, W - 140), f_cjk, NATIVE, 54)
             self.actors = pick_motifs(text + " " + illustration)
         if len(self.actors) > 1 and self.actors[0] == self.actors[1]:
             self.actors = self.actors[:1]
@@ -398,6 +445,8 @@ class Movie:
                 world.alpha_composite(layer, (max(0, box[0]), 0), (max(0, -box[0]), 0))
         self.world = world.convert("RGB")
 
+        srng = np.random.default_rng(42)
+        self.stars = [(srng.uniform(0, W * (n + 1)), srng.uniform(20, H * 0.5), srng.uniform(1.5, 4), srng.uniform(0, 6.3)) for _ in range(40 * n)]
         kinds = sorted({a for c in self.cards for a in c.actors})
         self.sprites = {a: [motif(a, SPRITE, 300 + i, b) for b in range(3)] for i, a in enumerate(kinds)}
         self._scaled = {}
@@ -427,6 +476,13 @@ class Movie:
         cam = k * W + pan * W + math.sin(t * 0.35) * 6  # gentle drift so nothing is ever fully still
         img = self.world.crop((int(cam), 0, int(cam) + W, H)).convert("RGBA")
         boil = int(t * 8) % 3
+        if STARS:
+            sd = ImageDraw.Draw(img)
+            for sx, sy, sr, ph in self.stars:
+                x = sx - cam
+                if -10 < x < W + 10:
+                    a = int(140 + 115 * math.sin(t * 2.2 + ph))
+                    sd.ellipse([x - sr, sy - sr, x + sr, sy + sr], fill=(255, 246, 214, a))
 
         # text belongs to the page, so it slides away with the world during the pan
         card.draw_text(img, local, -(cam - k * W))
@@ -447,13 +503,13 @@ class Movie:
                 scale = 1.0
                 if k == 0:  # first card: characters pop in
                     scale = max(0.01, ease_out_back(seg(local, 0.35 + 0.25 * card.actors.index(a), 1.0 + 0.25 * card.actors.index(a))))
-            y += math.sin(t * 2.4 + hash(a) % 7) * 12
+            y += math.sin(t * 2.4 + hash(a) % 7) * BOB
             placed.append((a, x, y, scale))
         if nxt is not None and pan > 0:
             for a in nxt.actors:
                 if a not in card.pos:  # arriving with the next page from the right
                     x1, y1 = nxt.pos[a]
-                    placed.append((a, x1 + (1 - pan) * W, y1 + math.sin(t * 2.4 + hash(a) % 7) * 12, 1.0))
+                    placed.append((a, x1 + (1 - pan) * W, y1 + math.sin(t * 2.4 + hash(a) % 7) * BOB, 1.0))
         for a, x, y, scale in placed:
             sp = self._sprite(a, boil, scale)
             img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height / 2)))
@@ -480,9 +536,11 @@ def score(movie):
         out[i0:i1] += gain * sig_fn(x) * fade
 
     def pluck(t0, f, gain=0.35):
+        f *= PITCH
         env_add(t0, lambda x: (np.sin(2 * np.pi * f * x) + 0.3 * np.sin(4 * np.pi * f * x)) * np.exp(-x * 5), 1.6, gain)
 
     def bell(t0, f, gain=0.3):
+        f *= PITCH
         env_add(t0, lambda x: sum(a * np.sin(2 * np.pi * f * m * x) for m, a in [(1, 1), (2.76, 0.4), (5.4, 0.2)]) * np.exp(-x * 2.2), 3.0, gain)
 
     def swish(t0, gain=0.12):
@@ -494,7 +552,7 @@ def score(movie):
     def pad(t0, dur, freqs, gain=0.06):
         env_add(t0, lambda x: sum(np.sin(2 * np.pi * f * x) + np.sin(2 * np.pi * f * 1.004 * x) for f in freqs) * np.minimum(1, x / 1.2) * np.minimum(1, (dur - x) / 1.0), dur, gain)
 
-    pad(0, total, [130.81, 196.0], 0.035)
+    pad(0, total, [130.81 * PITCH, 196.0 * PITCH], 0.045 if STARS else 0.035)
     bell(0.3, PENTA[5], 0.12)
     bell(0.9, PENTA[3], 0.08)
     for k, ((scene, dur), s0) in enumerate(zip(scenes, starts)):
@@ -527,8 +585,9 @@ def write_wav(path, samples):
 
 # ---------- render ----------
 
-def render_storybook_video(book, out_path, strip_path=None):
+def render_storybook_video(book, out_path, strip_path=None, style="watercolor", pace="normal"):
     """Render the whole storybook as one movie. Returns duration + per-card pause points for the viewer."""
+    apply_style(style, pace)
     movie = Movie(book)
     tmp = tempfile.mkdtemp(prefix="storytime-")
     video, audio = os.path.join(tmp, "video.mp4"), os.path.join(tmp, "score.wav")

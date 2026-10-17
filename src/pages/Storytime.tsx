@@ -8,7 +8,7 @@ import { AppShell } from '../components/ui/AppShell'
 import { Card } from '../components/ui/Card'
 import { Diamond } from '../components/ui/story'
 import { useAudio } from '../lib/useAudio'
-import type { Memo, StoryMovie, Storybook } from '../types'
+import type { Memo, MoviePace, MovieStyle, StoryMovie, Storybook } from '../types'
 
 export default function Storytime() {
   const { memoId } = useParams<{ memoId: string }>()
@@ -21,14 +21,19 @@ export default function Storytime() {
   const [mode, setMode] = useState<'movie' | 'pages'>('movie')
   const [making, setMaking] = useState(false)
   const [movieError, setMovieError] = useState<string | null>(null)
+  const [style, setStyle] = useState<MovieStyle>('watercolor')
+  const [pace, setPace] = useState<MoviePace>('normal')
+
+  const movieKey = `${style}-${pace}`
+  const currentMovie = book?.videos?.[movieKey] ?? (movieKey === 'watercolor-normal' ? book?.video : undefined)
 
   async function makeMovie(regenerate = false) {
     if (!memoId || !book) return
     setMaking(true)
     setMovieError(null)
     try {
-      const video = await makeStoryMovie(memoId, regenerate)
-      setBook({ ...book, video })
+      const video = await makeStoryMovie(memoId, { style, pace, regenerate })
+      setBook({ ...book, videos: { ...(book.videos ?? {}), [movieKey]: video } })
       setMode('movie')
     } catch (e) {
       setMovieError(e instanceof Error ? e.message : String(e))
@@ -127,21 +132,46 @@ export default function Storytime() {
         ))}
       </div>
 
-      {mode === 'movie' && book.video ? (
-        <MovieViewer movie={book.video} onRemake={() => makeMovie(true)} remaking={making} />
+      {mode === 'movie' && (
+        <div className="mt-3 space-y-2">
+          <OptionRow
+            label="Look"
+            value={style}
+            onChange={setStyle}
+            options={[
+              ['watercolor', '🎨 Watercolor'],
+              ['bedtime', '🌙 Bedtime'],
+              ['crayon', '🖍️ Crayon'],
+            ]}
+          />
+          <OptionRow
+            label="Speed"
+            value={pace}
+            onChange={setPace}
+            options={[
+              ['calm', 'Calm'],
+              ['normal', 'Normal'],
+              ['lively', 'Lively'],
+            ]}
+          />
+        </div>
+      )}
+
+      {mode === 'movie' && currentMovie ? (
+        <MovieViewer key={currentMovie.url} movie={currentMovie} onRemake={() => makeMovie(true)} remaking={making} />
       ) : mode === 'movie' ? (
         <Card className="mt-3 text-center">
           <Clapperboard size={36} className="mx-auto text-ember" aria-hidden="true" />
           <p className="mt-3 font-display text-2xl text-ink">Make it a movie</p>
           <p className="mt-1 text-base text-muted">
-            Every card becomes a scene in one watercolor animation, with music. The characters travel with you from card to card.
+            Every card becomes a scene in one animated film, with music. The characters travel with you from card to card.
           </p>
           <button
             onClick={() => makeMovie()}
             disabled={making}
             className="mt-5 inline-flex h-14 items-center gap-2 rounded-2xl bg-ember px-6 text-lg font-semibold text-white shadow-ember disabled:opacity-60"
           >
-            {making ? 'Painting the scenes… (about 20 s)' : '🎬 Make it a movie'}
+            {making ? 'Painting the scenes… (about 20 s)' : `🎬 Make the ${style} movie`}
           </button>
           {movieError && <p className="mt-3 text-base text-ember">{movieError}</p>}
         </Card>
@@ -349,5 +379,32 @@ function MovieViewer({ movie, onRemake, remaking }: { movie: StoryMovie; onRemak
         </button>
       </div>
     </>
+  )
+}
+
+function OptionRow<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string
+  value: T
+  onChange: (v: T) => void
+  options: ReadonlyArray<readonly [T, string]>
+}) {
+  return (
+    <div className="flex items-center gap-2 overflow-x-auto">
+      <span className="w-14 shrink-0 text-sm font-semibold text-muted">{label}</span>
+      {options.map(([v, text]) => (
+        <button
+          key={v}
+          onClick={() => onChange(v)}
+          className={`h-10 shrink-0 rounded-full px-4 text-sm font-semibold ${value === v ? 'bg-ember text-white shadow-ember' : 'bg-paper text-ink shadow-card'}`}
+        >
+          {text}
+        </button>
+      ))}
+    </div>
   )
 }

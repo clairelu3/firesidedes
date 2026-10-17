@@ -20,8 +20,11 @@ export type MemoTags = {
 }
 export type StorybookPage = { text: string; text_native: string | null; illustration: string }
 // Storytime movie: one continuous animation; rest_times[i] = where card i (title, pages…, end) settles.
-export type StoryMovie = { url: string; rest_times: number[]; duration: number }
-export type Storybook = { title: string; pages: StorybookPage[]; video?: StoryMovie }
+export type MovieStyle = 'watercolor' | 'bedtime' | 'crayon'
+export type MoviePace = 'calm' | 'normal' | 'lively'
+export type StoryMovie = { url: string; rest_times: number[]; duration: number; style?: MovieStyle; pace?: MoviePace }
+// videos is keyed "<style>-<pace>"; video is the original watercolor-normal movie from before styles existed.
+export type Storybook = { title: string; pages: StorybookPage[]; video?: StoryMovie; videos?: Record<string, StoryMovie> }
 export type Memo = { id: string; audioUrl: string; transcript?: string; createdAt: string; stageId?: string; tags?: MemoTags }
 export type Passage = { text: string; memoId: string }
 export type Chapter = { id: string; title: string; stageId: string; passages: Passage[]; status: 'draft' | 'approved' | 'hidden' }

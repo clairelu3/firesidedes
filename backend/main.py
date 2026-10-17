@@ -1,4 +1,5 @@
 import mimetypes
+import threading
 import os
 from typing import Any, Literal
 from uuid import uuid4
@@ -211,13 +212,20 @@ def post_storybook(memo_id: int, regenerate: bool = False):
     return book
 
 
+_render_lock = threading.Lock()  # the renderer's style settings are module-level, so one render at a time
+MOVIE_STYLES = {"watercolor", "bedtime", "crayon"}
+MOVIE_PACES = {"calm", "normal", "lively"}
+
+
 @router.post("/memos/{memo_id}/storybook/video")
-def post_storybook_video(memo_id: int, regenerate: bool = False):
-    """Storytime movie: render the storybook as one continuous watercolor animation (frames + sound in code).
-    Saved to storage; tags.storybook.video = {url, rest_times, duration}. rest_times = where each card settles."""
+def post_storybook_video(memo_id: int, regenerate: bool = False, style: str = "watercolor", pace: str = "normal"):
+    """Storytime movie: render the storybook as one continuous animation (frames + sound in code).
+    Each style/pace is cached in tags.storybook.videos["<style>-<pace>"] = {url, rest_times, duration, style, pace}."""
     import tempfile
     from motion.storyanim import render_storybook_video
 
+    if style not in MOVIE_STYLES or pace not in MOVIE_PACES:
+        raise HTTPException(400, f"style must be one of {sorted(MOVIE_STYLES)}, pace one of {sorted(MOVIE_PACES)}")
     rows = sb.table("memos").select("*").eq("id", memo_id).execute().data
     if not rows:
         raise HTTPException(404, "Memo not found")
@@ -225,20 +233,30 @@ def post_storybook_video(memo_id: int, regenerate: bool = False):
     book = tags.get("storybook")
     if not book:
         raise HTTPException(400, "Make the storybook first.")
-    if book.get("video") and not regenerate:
-        return book["video"]
+    key = f"{style}-{pace}"
+    videos = dict(book.get("videos") or {})
+    if book.get("video") and "watercolor-normal" not in videos:  # movies made before styles existed
+        videos["watercolor-normal"] = {**book["video"], "style": "watercolor", "pace": "normal"}
+    if videos.get(key) and not regenerate:
+        return videos[key]
 
     out = os.path.join(tempfile.mkdtemp(prefix="storytime-"), "movie.mp4")
-    result = render_storybook_video(book, out)
-    path = f"storytime/{memo_id}-{uuid4().hex[:8]}.mp4"
+    with _render_lock:
+        result = render_storybook_video({"title": book["title"], "pages": book["pages"]}, out, style=style, pace=pace)
+    path = f"storytime/{memo_id}-{key}-{uuid4().hex[:8]}.mp4"
     with open(out, "rb") as f:
         sb.storage.from_("memos").upload(path, f.read(), {"content-type": "video/mp4"})
     video = {
         "url": sb.storage.from_("memos").get_public_url(path),
         "rest_times": result["rest_times"],
         "duration": result["duration"],
+        "style": style,
+        "pace": pace,
     }
-    sb.table("memos").update({"tags": {**tags, "storybook": {**book, "video": video}}}).eq("id", memo_id).execute()
+    videos[key] = video
+    # re-read tags so a storybook regenerated meanwhile isn't overwritten with stale data
+    latest = (sb.table("memos").select("tags").eq("id", memo_id).execute().data[0].get("tags") or {})
+    sb.table("memos").update({"tags": {**latest, "storybook": {**(latest.get("storybook") or book), "videos": videos}}}).eq("id", memo_id).execute()
     return video
 
 

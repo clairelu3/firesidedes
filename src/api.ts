@@ -14,6 +14,8 @@ import type {
   MemoTags,
   Passage,
   Person,
+  MoviePace,
+  MovieStyle,
   StoryMovie,
   Storybook,
 } from './types'
@@ -222,8 +224,12 @@ export async function makeStorybook(memoId: string, regenerate = false): Promise
 }
 
 /** Storytime movie: renders the storybook as one continuous watercolor animation (~20 s to render, then cached). */
-export async function makeStoryMovie(memoId: string, regenerate = false): Promise<StoryMovie> {
-  const res = await postWithRetry(`/api/memos/${encodeURIComponent(memoId)}/storybook/video?regenerate=${regenerate}`)
+export async function makeStoryMovie(
+  memoId: string,
+  { style = 'watercolor', pace = 'normal', regenerate = false }: { style?: MovieStyle; pace?: MoviePace; regenerate?: boolean } = {},
+): Promise<StoryMovie> {
+  const q = new URLSearchParams({ style, pace, regenerate: String(regenerate) })
+  const res = await postWithRetry(`/api/memos/${encodeURIComponent(memoId)}/storybook/video?${q}`)
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? `Movie failed (${res.status})`)
   return res.json()
 }
