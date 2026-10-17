@@ -75,8 +75,9 @@ def create_memo(data: bytes, filename: str, content_type: str | None) -> dict:
     url = sb.storage.from_("memos").get_public_url(path)
 
     life_map = get_life_map()
-    transcript = ai.transcribe(data, path)
-    tags = ai.tag_memo(transcript, life_map, get_people())
+    people = get_people()
+    transcript = ai.transcribe(data, path, people)
+    tags = ai.tag_memo(transcript, life_map, people)
 
     # Only keep stage_id if it's a real stage, so a bad AI guess can't break the insert
     try:

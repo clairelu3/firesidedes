@@ -25,10 +25,10 @@ Demo: open `/qr` on the laptop, scan with a phone → `/r` → record → it sho
 
 | Function | Does |
 |---|---|
-| `transcribe(data, filename)` | Whisper → transcript (any language, code-switching) |
+| `transcribe(data, filename, people)` | gpt-4o-transcribe → transcript in her own language(s), roster names as spelling hints |
 | `tag_memo(transcript, life_map, people)` | → `{stage_id, people, themes, summary, place, year_start, year_end, year_is_estimate, unmatched_people, tone, sensitive, sensitivity_reason}` stored in `memos.tags` |
 | `write_chapter(stage, memos)` | → `{title, body}`; `body = {passages: [{text, memoId, memoIds, kind, uncertain}], yearRange, openQuestions, sensitive}` |
 
 `passages[].memoId` matches the frontend's `Passage` type. `kind` is `quote` (her words), `narration`, or `connective` (AI-added context). Without `OPENAI_API_KEY` the functions fall back to stubs.
 
-Optional env: `OPENAI_MODEL` (default `gpt-4.1`), `OPENAI_TRANSCRIBE_MODEL` (default `whisper-1`).
+Optional env: `OPENAI_MODEL` (default `gpt-4.1`), `OPENAI_TRANSCRIBE_MODEL` (default `gpt-4o-transcribe`).

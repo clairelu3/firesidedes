@@ -13,7 +13,7 @@ load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1")
-TRANSCRIBE_MODEL = os.getenv("OPENAI_TRANSCRIBE_MODEL", "whisper-1")
+TRANSCRIBE_MODEL = os.getenv("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-transcribe")
 
 client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
@@ -57,11 +57,18 @@ def _context(life_map: list[dict], people: list[dict]) -> str:
 
 # ---------- 1. Transcribe ----------
 
-def transcribe(data: bytes, filename: str) -> str:
-    """Audio bytes -> transcript text."""
+def transcribe(data: bytes, filename: str, people: list[dict] | None = None) -> str:
+    """Audio bytes -> transcript text, in whatever language(s) she spoke.
+
+    The roster's names and nicknames go in as a spelling hint, so "阿偉" / "Ah-Wei" come out right.
+    """
     if not client:
         return f"[stub transcript for {filename}: set OPENAI_API_KEY in backend/.env]"
-    res = client.audio.transcriptions.create(model=TRANSCRIBE_MODEL, file=(filename, data))
+    names = ", ".join(
+        p["name"] + (f" ({p['nickname']})" if p.get("nickname") else "") for p in (people or [])
+    )
+    hint = "Family memory. May mix Mandarin, Taiwanese, and English." + (f" Names: {names}." if names else "")
+    res = client.audio.transcriptions.create(model=TRANSCRIBE_MODEL, file=(filename, data), prompt=hint)
     return res.text
 
 
@@ -102,6 +109,7 @@ How to tag:
 - Years: give a year range when one is spoken or can be reasonably inferred from the life stage. Set year_is_estimate to true unless she states the year outright.
 - people: match people to the roster by name, nickname, or relationship ("my oldest cousin"), and return their roster name exactly. Put anyone you cannot match in unmatched_people, described as she refers to them.
 - sensitive: true if the memo touches crime or arrests, mental illness, addiction, affairs, abuse, or family estrangement. These stay private until she decides who sees them, so lean toward flagging. Explain briefly in sensitivity_reason.
+- Write summary, place, themes, and tone in English even when she spoke another language, so her English-speaking kids can read them. Keep names as she says them.
 - Do not invent facts that are not in the transcript or the life map."""
 
 

@@ -1,6 +1,22 @@
 [
-  {"name": "Lin Ming-Hui", "nickname": "Ah-Ming", "relationship": "oldest cousin"},
-  {"name": "Chen Shu-Fen", "nickname": "Ah-Ma", "relationship": "paternal grandmother"},
-  {"name": "Lin Wei", "nickname": "Ah-Wei", "relationship": "younger brother"},
-  {"name": "David Lin", "nickname": null, "relationship": "husband"}
+  {
+    "name": "Lin Ming-Hui",
+    "nickname": "Ah-Ming 阿明",
+    "relationship": "oldest cousin"
+  },
+  {
+    "name": "Chen Shu-Fen",
+    "nickname": "Ah-Ma 阿嬤",
+    "relationship": "paternal grandmother"
+  },
+  {
+    "name": "Lin Wei",
+    "nickname": "Ah-Wei 阿偉",
+    "relationship": "younger brother"
+  },
+  {
+    "name": "David Lin",
+    "nickname": null,
+    "relationship": "husband"
+  }
 ]
