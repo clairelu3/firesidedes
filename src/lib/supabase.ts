@@ -1,13 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabaseConfigured = Boolean(url && anonKey)
-
-// Placeholder values keep the app rendering (with a setup banner) before .env.local exists.
-export const supabase = createClient(url || 'http://localhost:54321', anonKey || 'missing-anon-key')
-
-export function audioUrl(path: string) {
-  return supabase.storage.from('audio').getPublicUrl(path).data.publicUrl
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in .env.local')
 }
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)

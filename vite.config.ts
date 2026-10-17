@@ -16,7 +16,13 @@ const lanIp =
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss(), ...(https ? [basicSsl()] : [])],
-  server: { host: true, port: 5173 },
+  server: {
+    host: true,
+    port: 5173,
+    proxy: {
+      '/api': 'http://localhost:8000',
+    },
+  },
   define: {
     __LAN_IP__: JSON.stringify(lanIp),
   },
