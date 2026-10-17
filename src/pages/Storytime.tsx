@@ -1,14 +1,14 @@
 // /storytime/:memoId — one memory as a rhyming picture book for the grandkids, one page at a time,
 // with the storyteller's language under each page and her real recording one tap away.
-import { ChevronLeft, ChevronRight, Pause, Play, RefreshCw, Sparkles } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { BookOpen, ChevronLeft, ChevronRight, Clapperboard, Pause, Play, RefreshCw, Sparkles } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { listMemos, makeStorybook } from '../api'
+import { listMemos, makeStoryMovie, makeStorybook } from '../api'
 import { AppShell } from '../components/ui/AppShell'
 import { Card } from '../components/ui/Card'
 import { Diamond } from '../components/ui/story'
 import { useAudio } from '../lib/useAudio'
-import type { Memo, Storybook } from '../types'
+import type { Memo, MoviePace, MovieStyle, StoryMovie, Storybook } from '../types'
 
 export default function Storytime() {
   const { memoId } = useParams<{ memoId: string }>()
@@ -18,6 +18,29 @@ export default function Storytime() {
   const [showNative, setShowNative] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [mode, setMode] = useState<'movie' | 'pages'>('movie')
+  const [making, setMaking] = useState(false)
+  const [movieError, setMovieError] = useState<string | null>(null)
+  const [style, setStyle] = useState<MovieStyle>('watercolor')
+  const [pace, setPace] = useState<MoviePace>('normal')
+
+  const movieKey = `${style}-${pace}`
+  const currentMovie = book?.videos?.[movieKey] ?? (movieKey === 'watercolor-normal' ? book?.video : undefined)
+
+  async function makeMovie(regenerate = false) {
+    if (!memoId || !book) return
+    setMaking(true)
+    setMovieError(null)
+    try {
+      const video = await makeStoryMovie(memoId, { style, pace, regenerate })
+      setBook({ ...book, videos: { ...(book.videos ?? {}), [movieKey]: video } })
+      setMode('movie')
+    } catch (e) {
+      setMovieError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setMaking(false)
+    }
+  }
 
   async function load(regenerate = false) {
     if (!memoId) return
@@ -79,7 +102,7 @@ export default function Storytime() {
       <div className="flex items-center justify-between gap-2">
         {back}
         <div className="flex gap-1">
-          {hasNative && (
+          {hasNative && mode === 'pages' && (
             <button
               onClick={() => setShowNative((v) => !v)}
               className="h-10 rounded-xl px-3 text-sm font-semibold text-muted hover:bg-field"
@@ -97,6 +120,63 @@ export default function Storytime() {
         </div>
       </div>
 
+      <div className="mt-3 inline-flex rounded-xl bg-field p-1">
+        {([['movie', 'Movie', Clapperboard], ['pages', 'Pages', BookOpen]] as const).map(([m, label, Icon]) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={`flex h-10 items-center gap-1.5 rounded-lg px-4 text-sm font-semibold ${mode === m ? 'bg-paper text-ink shadow-card' : 'text-muted'}`}
+          >
+            <Icon size={16} aria-hidden="true" /> {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'movie' && (
+        <div className="mt-3 space-y-2">
+          <OptionRow
+            label="Look"
+            value={style}
+            onChange={setStyle}
+            options={[
+              ['watercolor', '🎨 Watercolor'],
+              ['bedtime', '🌙 Bedtime'],
+              ['crayon', '🖍️ Crayon'],
+            ]}
+          />
+          <OptionRow
+            label="Speed"
+            value={pace}
+            onChange={setPace}
+            options={[
+              ['calm', 'Calm'],
+              ['normal', 'Normal'],
+              ['lively', 'Lively'],
+            ]}
+          />
+        </div>
+      )}
+
+      {mode === 'movie' && currentMovie ? (
+        <MovieViewer key={currentMovie.url} movie={currentMovie} onRemake={() => makeMovie(true)} remaking={making} />
+      ) : mode === 'movie' ? (
+        <Card className="mt-3 text-center">
+          <Clapperboard size={36} className="mx-auto text-ember" aria-hidden="true" />
+          <p className="mt-3 font-display text-2xl text-ink">Make it a movie</p>
+          <p className="mt-1 text-base text-muted">
+            Every card becomes a scene in one animated film, with music. The characters travel with you from card to card.
+          </p>
+          <button
+            onClick={() => makeMovie()}
+            disabled={making}
+            className="mt-5 inline-flex h-14 items-center gap-2 rounded-2xl bg-ember px-6 text-lg font-semibold text-white shadow-ember disabled:opacity-60"
+          >
+            {making ? 'Painting the scenes… (about 20 s)' : `🎬 Make the ${style} movie`}
+          </button>
+          {movieError && <p className="mt-3 text-base text-ember">{movieError}</p>}
+        </Card>
+      ) : (
+        <>
       <article className="mt-3 flex min-h-[28rem] flex-col rounded-3xl border border-cream-border bg-cream px-6 py-8 shadow-card">
         {page === 0 ? (
           <header className="text-center">
@@ -146,6 +226,9 @@ export default function Storytime() {
         </button>
       </div>
 
+        </>
+      )}
+
       {memo?.audioUrl && <HearIt src={memo.audioUrl} />}
     </AppShell>
   )
@@ -168,5 +251,160 @@ function HearIt({ src }: { src: string }) {
         <p className="text-sm text-muted">Her real recording of this memory</p>
       </div>
     </Card>
+  )
+}
+
+// One continuous movie; Next plays it to the next card's resting point and pauses there,
+// so stepping through cards feels like scenes of one film rather than separate slides.
+function MovieViewer({ movie, onRemake, remaking }: { movie: StoryMovie; onRemake: () => void; remaking: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null)
+  const target = useRef<number | null>(null)
+  const raf = useRef(0)
+  const [card, setCard] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [needsTap, setNeedsTap] = useState(false)
+  const rests = movie.rest_times
+  const last = rests.length - 1
+
+  const watch = useCallback(() => {
+    const v = ref.current
+    if (!v) return
+    if (target.current !== null && v.currentTime >= target.current) {
+      v.pause()
+      v.currentTime = target.current
+      target.current = null
+      setPlaying(false)
+      return
+    }
+    raf.current = requestAnimationFrame(watch)
+  }, [])
+
+  const playTo = useCallback(
+    async (to: number | null) => {
+      const v = ref.current
+      if (!v) return
+      target.current = to
+      cancelAnimationFrame(raf.current)
+      try {
+        await v.play()
+        setNeedsTap(false)
+        setPlaying(true)
+        raf.current = requestAnimationFrame(watch)
+      } catch {
+        setNeedsTap(true) // browser blocked autoplay with sound until a tap
+      }
+    },
+    [watch],
+  )
+
+  useEffect(() => {
+    setCard(0)
+    playTo(rests[0])
+    return () => cancelAnimationFrame(raf.current)
+  }, [movie.url, playTo, rests])
+
+  function next() {
+    if (card >= last) return
+    setCard(card + 1)
+    playTo(rests[card + 1])
+  }
+  function prev() {
+    const v = ref.current
+    if (!v || card <= 0) return
+    v.pause()
+    target.current = null
+    v.currentTime = rests[card - 1]
+    setCard(card - 1)
+    setPlaying(false)
+  }
+  function playAll() {
+    setCard(last)
+    playTo(null)
+  }
+
+  return (
+    <>
+      <div className="relative mt-3 overflow-hidden rounded-3xl border border-cream-border bg-cream shadow-card">
+        <video
+          ref={ref}
+          src={movie.url}
+          playsInline
+          preload="auto"
+          onEnded={() => setPlaying(false)}
+          className="block aspect-[9/16] w-full"
+        />
+        {needsTap && (
+          <button
+            onClick={() => playTo(rests[card])}
+            className="absolute inset-0 flex items-center justify-center bg-ink/10"
+            aria-label="Start the movie"
+          >
+            <span className="flex size-20 items-center justify-center rounded-full bg-ember text-white shadow-ember">
+              <Play size={34} fill="currentColor" className="ml-1" aria-hidden="true" />
+            </span>
+          </button>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <button
+          disabled={card === 0}
+          onClick={prev}
+          aria-label="Previous card"
+          className="flex size-14 items-center justify-center rounded-full bg-paper text-ink shadow-card disabled:opacity-30"
+        >
+          <ChevronLeft size={24} aria-hidden="true" />
+        </button>
+        <div className="flex gap-1.5" aria-label={`Card ${card + 1} of ${rests.length}`}>
+          {rests.map((_, i) => (
+            <span key={i} className={`h-2 rounded-full transition-all ${i === card ? 'w-6 bg-ember' : 'w-2 bg-line'}`} />
+          ))}
+        </div>
+        <button
+          disabled={card >= last || playing}
+          onClick={next}
+          aria-label="Next card"
+          className="flex size-14 items-center justify-center rounded-full bg-ember text-white shadow-ember disabled:opacity-30"
+        >
+          <ChevronRight size={24} aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="mt-3 flex justify-center gap-2">
+        <button onClick={playAll} className="h-10 rounded-xl px-3 text-sm font-semibold text-ember hover:bg-ember-tint/50">
+          Play all
+        </button>
+        <button onClick={onRemake} disabled={remaking} className="h-10 rounded-xl px-3 text-sm font-semibold text-muted hover:bg-field disabled:opacity-50">
+          {remaking ? 'Repainting…' : 'Repaint movie'}
+        </button>
+      </div>
+    </>
+  )
+}
+
+function OptionRow<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string
+  value: T
+  onChange: (v: T) => void
+  options: ReadonlyArray<readonly [T, string]>
+}) {
+  return (
+    <div className="flex items-center gap-2 overflow-x-auto">
+      <span className="w-14 shrink-0 text-sm font-semibold text-muted">{label}</span>
+      {options.map(([v, text]) => (
+        <button
+          key={v}
+          onClick={() => onChange(v)}
+          className={`h-10 shrink-0 rounded-full px-4 text-sm font-semibold ${value === v ? 'bg-ember text-white shadow-ember' : 'bg-paper text-ink shadow-card'}`}
+        >
+          {text}
+        </button>
+      ))}
+    </div>
   )
 }

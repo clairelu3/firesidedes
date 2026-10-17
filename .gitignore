@@ -31,3 +31,6 @@ dist-ssr
 # Python backend
 backend/venv/
 __pycache__/
+
+# Style reference images (other artists' work): keep local only
+backend/motion/refs/
