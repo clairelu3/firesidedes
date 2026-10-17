@@ -66,14 +66,14 @@ def insert_people(people: list[Person]) -> list[dict]:
     return sb.table("people").insert([p.model_dump() for p in people]).execute().data
 
 
-def create_memo(data: bytes, filename: str, content_type: str | None) -> dict:
-    content_type = content_type or mimetypes.guess_type(filename)[0] or "audio/webm"
-    ext = os.path.splitext(filename)[1] or ".webm"
-    path = f"{uuid4()}{ext}"
+def require_ai():
+    """Refuse instead of saving stub transcripts when this backend has no OpenAI key."""
+    if ai.client is None:
+        raise HTTPException(503, "This backend has no OPENAI_API_KEY. Add it to backend/.env and restart the backend.")
 
-    sb.storage.from_("memos").upload(path, data, {"content-type": content_type})
-    url = sb.storage.from_("memos").get_public_url(path)
 
+def transcribe_and_tag(data: bytes, path: str) -> tuple[str, dict, int | None]:
+    """Audio -> (transcript, tags, valid stage_id). Shared by upload and reprocess."""
     life_map = get_life_map()
     people = get_people()
     transcript = ai.transcribe(data, path, people)
@@ -86,6 +86,19 @@ def create_memo(data: bytes, filename: str, content_type: str | None) -> dict:
         stage_id = None
     if stage_id not in {s["id"] for s in life_map}:
         stage_id = None
+    return transcript, tags, stage_id
+
+
+def create_memo(data: bytes, filename: str, content_type: str | None) -> dict:
+    require_ai()
+    content_type = content_type or mimetypes.guess_type(filename)[0] or "audio/webm"
+    ext = os.path.splitext(filename)[1] or ".webm"
+    path = f"{uuid4()}{ext}"
+
+    sb.storage.from_("memos").upload(path, data, {"content-type": content_type})
+    url = sb.storage.from_("memos").get_public_url(path)
+
+    transcript, tags, stage_id = transcribe_and_tag(data, path)
 
     row = sb.table("memos").insert({
         "audio_url": url,
@@ -153,6 +166,24 @@ def list_memos(stage_id: int | None = None):
     if stage_id is not None:
         query = query.eq("stage_id", stage_id)
     return query.execute().data
+
+
+@router.post("/memos/{memo_id}/reprocess")
+def reprocess_memo(memo_id: int):
+    """Re-run transcription + tagging on a memo's saved audio (e.g. one saved with a stub transcript)."""
+    require_ai()
+    rows = sb.table("memos").select("*").eq("id", memo_id).execute().data
+    if not rows:
+        raise HTTPException(404, "Memo not found")
+    url = rows[0].get("audio_url") or ""
+    path = url.split("/memos/")[-1] if "/memos/" in url else None
+    if not path:
+        raise HTTPException(400, "This memo has no saved audio")
+    data = sb.storage.from_("memos").download(path)
+    transcript, tags, stage_id = transcribe_and_tag(data, path)
+    return sb.table("memos").update(
+        {"transcript": transcript, "tags": tags, "stage_id": stage_id}
+    ).eq("id", memo_id).execute().data[0]
 
 
 @router.post("/memos/{memo_id}/storybook")
