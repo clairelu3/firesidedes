@@ -19,7 +19,9 @@ export type MemoTags = {
   storybook?: Storybook // Storytime version, cached by the backend
 }
 export type StorybookPage = { text: string; text_native: string | null; illustration: string }
-export type Storybook = { title: string; pages: StorybookPage[] }
+// Storytime movie: one continuous animation; rest_times[i] = where card i (title, pages…, end) settles.
+export type StoryMovie = { url: string; rest_times: number[]; duration: number }
+export type Storybook = { title: string; pages: StorybookPage[]; video?: StoryMovie }
 export type Memo = { id: string; audioUrl: string; transcript?: string; createdAt: string; stageId?: string; tags?: MemoTags }
 export type Passage = { text: string; memoId: string }
 export type Chapter = { id: string; title: string; stageId: string; passages: Passage[]; status: 'draft' | 'approved' | 'hidden' }

@@ -211,6 +211,37 @@ def post_storybook(memo_id: int, regenerate: bool = False):
     return book
 
 
+@router.post("/memos/{memo_id}/storybook/video")
+def post_storybook_video(memo_id: int, regenerate: bool = False):
+    """Storytime movie: render the storybook as one continuous watercolor animation (frames + sound in code).
+    Saved to storage; tags.storybook.video = {url, rest_times, duration}. rest_times = where each card settles."""
+    import tempfile
+    from motion.storyanim import render_storybook_video
+
+    rows = sb.table("memos").select("*").eq("id", memo_id).execute().data
+    if not rows:
+        raise HTTPException(404, "Memo not found")
+    tags = rows[0].get("tags") or {}
+    book = tags.get("storybook")
+    if not book:
+        raise HTTPException(400, "Make the storybook first.")
+    if book.get("video") and not regenerate:
+        return book["video"]
+
+    out = os.path.join(tempfile.mkdtemp(prefix="storytime-"), "movie.mp4")
+    result = render_storybook_video(book, out)
+    path = f"storytime/{memo_id}-{uuid4().hex[:8]}.mp4"
+    with open(out, "rb") as f:
+        sb.storage.from_("memos").upload(path, f.read(), {"content-type": "video/mp4"})
+    video = {
+        "url": sb.storage.from_("memos").get_public_url(path),
+        "rest_times": result["rest_times"],
+        "duration": result["duration"],
+    }
+    sb.table("memos").update({"tags": {**tags, "storybook": {**book, "video": video}}}).eq("id", memo_id).execute()
+    return video
+
+
 # ---------- Chapters ----------
 
 @router.post("/chapters/generate")

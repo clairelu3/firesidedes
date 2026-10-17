@@ -14,6 +14,7 @@ import type {
   MemoTags,
   Passage,
   Person,
+  StoryMovie,
   Storybook,
 } from './types'
 
@@ -205,10 +206,25 @@ export async function reprocessMemo(memoId: string): Promise<Memo> {
   return toMemo((await res.json()) as MemoRow)
 }
 
+// For idempotent backend calls: retry once on a 5xx (e.g. a dropped Supabase connection on the backend).
+async function postWithRetry(url: string): Promise<Response> {
+  const res = await fetch(url, { method: 'POST' })
+  if (res.status < 500) return res
+  await new Promise((r) => setTimeout(r, 600))
+  return fetch(url, { method: 'POST' })
+}
+
 /** Storytime: one memo as a rhyming kids' picture book. Cached on the memo; regenerate makes a new version. */
 export async function makeStorybook(memoId: string, regenerate = false): Promise<Storybook> {
-  const res = await fetch(`/api/memos/${encodeURIComponent(memoId)}/storybook?regenerate=${regenerate}`, { method: 'POST' })
+  const res = await postWithRetry(`/api/memos/${encodeURIComponent(memoId)}/storybook?regenerate=${regenerate}`)
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? `Storytime failed (${res.status})`)
+  return res.json()
+}
+
+/** Storytime movie: renders the storybook as one continuous watercolor animation (~20 s to render, then cached). */
+export async function makeStoryMovie(memoId: string, regenerate = false): Promise<StoryMovie> {
+  const res = await postWithRetry(`/api/memos/${encodeURIComponent(memoId)}/storybook/video?regenerate=${regenerate}`)
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? `Movie failed (${res.status})`)
   return res.json()
 }
 
