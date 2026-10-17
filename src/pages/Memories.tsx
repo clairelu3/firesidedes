@@ -2,7 +2,7 @@
 // Each life stage can be turned into a draft chapter, which then shows up in Review.
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { generateChapter, getLifeMap, listMemos } from '../api'
+import { generateChapter, getLifeMap, listMemos, reprocessMemo } from '../api'
 import type { LifeStage, Memo } from '../types'
 
 type GroupBy = 'stage' | 'place'
@@ -123,7 +123,12 @@ export default function Memories() {
 
           <ul className="space-y-3">
             {g.memos.map((m) => (
-              <MemoCard key={m.id} memo={m} stageLabel={groupBy === 'place' ? stages.find((s) => s.id === m.stageId)?.label : undefined} />
+              <MemoCard
+                key={m.id}
+                memo={m}
+                stageLabel={groupBy === 'place' ? stages.find((s) => s.id === m.stageId)?.label : undefined}
+                onUpdate={(updated) => setMemos((prev) => prev?.map((x) => (x.id === updated.id ? updated : x)) ?? prev)}
+              />
             ))}
           </ul>
         </section>
@@ -132,8 +137,43 @@ export default function Memories() {
   )
 }
 
-function MemoCard({ memo, stageLabel }: { memo: Memo; stageLabel?: string }) {
+// Saved without real AI output (backend had no OpenAI key, or an early upload).
+const needsRetry = (m: Memo) => !m.transcript?.trim() || m.transcript.startsWith('[stub')
+
+function MemoCard({ memo, stageLabel, onUpdate }: { memo: Memo; stageLabel?: string; onUpdate: (m: Memo) => void }) {
   const t = memo.tags
+  const [retrying, setRetrying] = useState(false)
+  const [retryError, setRetryError] = useState<string | null>(null)
+
+  async function retry() {
+    setRetrying(true)
+    setRetryError(null)
+    try {
+      onUpdate(await reprocessMemo(memo.id))
+    } catch (e) {
+      setRetryError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setRetrying(false)
+    }
+  }
+
+  if (needsRetry(memo)) {
+    return (
+      <li className="rounded-xl border border-dashed border-amber-300 bg-amber-50 p-4">
+        <p className="font-medium text-amber-900">This recording wasn't transcribed</p>
+        <p className="mt-1 text-base text-amber-800">It was saved before the AI could run. The audio is safe.</p>
+        {memo.audioUrl && <audio controls src={memo.audioUrl} className="mt-3 w-full" />}
+        <button
+          onClick={retry}
+          disabled={retrying}
+          className="mt-3 rounded-lg bg-stone-800 px-4 py-2 text-base font-semibold text-white disabled:opacity-50"
+        >
+          {retrying ? 'Transcribing…' : 'Retry transcription'}
+        </button>
+        {retryError && <p className="mt-2 text-base text-red-700">{retryError}</p>}
+      </li>
+    )
+  }
   const chips = [
     stageLabel,
     yearsOf(memo),

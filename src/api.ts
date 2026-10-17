@@ -198,6 +198,13 @@ export async function uploadMemo(blob: Blob): Promise<Memo> {
   return toMemo((await res.json()) as MemoRow)
 }
 
+/** Re-run transcription + AI tagging on a memo's saved audio (e.g. one saved while the backend had no OpenAI key). */
+export async function reprocessMemo(memoId: string): Promise<Memo> {
+  const res = await fetch(`/api/memos/${encodeURIComponent(memoId)}/reprocess`, { method: 'POST' })
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? `Retry failed (${res.status})`)
+  return toMemo((await res.json()) as MemoRow)
+}
+
 /** Storytime: one memo as a rhyming kids' picture book. Cached on the memo; regenerate makes a new version. */
 export async function makeStorybook(memoId: string, regenerate = false): Promise<Storybook> {
   const res = await fetch(`/api/memos/${encodeURIComponent(memoId)}/storybook?regenerate=${regenerate}`, { method: 'POST' })
