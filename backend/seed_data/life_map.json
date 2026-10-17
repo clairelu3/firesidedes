@@ -1,5 +1,5 @@
 [
-  {"label": "Childhood", "place": "Placeholder town", "start_year": 1950, "end_year": 1962, "notes": "Placeholder: replace with the real life map"},
-  {"label": "Young adulthood", "place": "Placeholder city", "start_year": 1963, "end_year": 1975, "notes": "Placeholder"},
-  {"label": "Family years", "place": "Placeholder city", "start_year": 1976, "end_year": 2000, "notes": "Placeholder"}
+  {"label": "Childhood in Tainan", "place": "Tainan, Taiwan", "start_year": 1958, "end_year": 1968, "notes": "Grew up in her grandfather's house with her parents, grandmother, and about 20 cousins"},
+  {"label": "Teen years in Taipei", "place": "Zhongshan Road, Taipei, Taiwan", "start_year": 1968, "end_year": 1976, "notes": "Family moved to Taipei; girls' high school, then a bank job"},
+  {"label": "Marriage and moving to California", "place": "San Jose, California", "start_year": 1982, "end_year": 1995, "notes": "Emigrated with her husband; worked as an accountant; raised two kids"}
 ]
