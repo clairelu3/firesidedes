@@ -81,10 +81,12 @@ TAG_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
     "required": [
-        "summary", "stage_id", "place", "year_start", "year_end", "year_is_estimate",
+        "language", "transcript_en", "summary", "stage_id", "place", "year_start", "year_end", "year_is_estimate",
         "people", "unmatched_people", "themes", "tone", "sensitive", "sensitivity_reason",
     ],
     "properties": {
+        "language": {"type": "string", "description": "Language(s) she spoke, in English, e.g. 'Mandarin', 'Mandarin + English', 'English'."},
+        "transcript_en": {"type": "string", "description": "Faithful English translation of the full transcript (identical to it if she spoke English)."},
         "summary": {"type": "string", "description": "One plain-English sentence on what this memo is about."},
         "stage_id": {**_nullable_int, "description": "stage_id from the life map, or null if truly unclear."},
         "place": _nullable_str,
@@ -109,6 +111,7 @@ How to tag:
 - Years: give a year range when one is spoken or can be reasonably inferred from the life stage. Set year_is_estimate to true unless she states the year outright.
 - people: match people to the roster by name, nickname, or relationship ("my oldest cousin"), and return their roster name exactly. Put anyone you cannot match in unmatched_people, described as she refers to them.
 - sensitive: true if the memo touches crime or arrests, mental illness, addiction, affairs, abuse, or family estrangement. These stay private until she decides who sees them, so lean toward flagging. Explain briefly in sensitivity_reason.
+- transcript_en: translate the whole transcript into natural English, sentence by sentence, keeping her phrasing, tone, and every detail. Do not summarize, smooth over, or add anything. Keep names as she says them (e.g. "Ah-Wei"). If she spoke English, copy the transcript as is, only fixing obvious speech-to-text errors.
 - Write summary, place, themes, and tone in English even when she spoke another language, so her English-speaking kids can read them. Keep names as she says them.
 - Do not invent facts that are not in the transcript or the life map."""
 
@@ -117,7 +120,7 @@ def tag_memo(transcript: str, life_map: list[dict], people: list[dict]) -> dict:
     """Transcript + context -> tags.
 
     Returns {"stage_id": <id from life_map or None>, "people": [names], "themes": [str], ...}
-    plus summary, place, year_start, year_end, year_is_estimate, unmatched_people, tone,
+    plus language, transcript_en (English translation; the original stays in memos.transcript), summary, place, year_start, year_end, year_is_estimate, unmatched_people, tone,
     sensitive, sensitivity_reason.
     """
     if not client:
@@ -205,7 +208,10 @@ def write_chapter(stage: dict, memos: list[dict]) -> dict:
         who = ", ".join((tags.get("people") or []) + (tags.get("unmatched_people") or []))
         blocks.append(
             f'<memo ref="{ref}" years="{years}" place="{tags.get("place") or "?"}" '
-            f'people="{who}" sensitive="{bool(tags.get("sensitive"))}">\n{m.get("transcript") or ""}\n</memo>'
+            f'people="{who}" sensitive="{bool(tags.get("sensitive"))}">\n'
+            f'<original>{m.get("transcript") or ""}</original>\n'
+            + (f'<english>{tags["transcript_en"]}</english>\n' if tags.get("transcript_en") else "")
+            + "</memo>"
         )
 
     stage_line = (

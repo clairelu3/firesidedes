@@ -93,6 +93,9 @@ export default function Record() {
               <li key={memo.id} className="rounded-xl border border-stone-200 bg-white p-4">
                 <p className="text-base text-stone-500">{new Date(memo.createdAt).toLocaleString()}</p>
                 {memo.transcript && <p className="mt-1">{memo.transcript}</p>}
+                {memo.tags?.transcript_en && memo.tags.transcript_en.trim() !== memo.transcript?.trim() && (
+                  <p className="mt-1 text-base italic text-stone-600">English: {memo.tags.transcript_en}</p>
+                )}
                 <audio controls src={memo.audioUrl} className="mt-3 w-full" />
               </li>
             ))}
