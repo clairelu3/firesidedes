@@ -16,6 +16,9 @@ MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1")
 TRANSCRIBE_MODEL = os.getenv("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-transcribe")
 
 client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+if not client:
+    print("\n⚠️  OPENAI_API_KEY is not set in backend/.env: transcription, tagging, chapters and Storytime "
+          "will return stub text. Add the key and restart the backend.\n", flush=True)
 
 
 # ---------- Helpers ----------

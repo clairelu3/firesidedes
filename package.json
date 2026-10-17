@@ -8,7 +8,13 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "dev:phone": "HTTPS=1 vite"
+    "dev:phone": "HTTPS=1 vite",
+    "setup": "bash scripts/setup.sh",
+    "start": "bash scripts/start.sh",
+    "start:phone": "HTTPS=1 bash scripts/start.sh",
+    "backend": "cd backend && venv/bin/uvicorn main:app --reload --host 127.0.0.1 --port 8000",
+    "check-env": "bash scripts/check-env.sh",
+    "tunnel": "cloudflared tunnel --no-autoupdate --url http://localhost:5173"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
