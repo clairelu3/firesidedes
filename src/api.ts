@@ -3,9 +3,20 @@
 // touching src/pages/. DB ids are integers; the app uses strings.
 
 import { supabase } from './lib/supabase'
-import type { Chapter, LifeMap, LifeStage, Memo, Passage, Person } from './types'
+import { resizeImage } from './lib/image'
+import type {
+  Chapter,
+  Family,
+  FamilyMember,
+  LifeMap,
+  LifeStage,
+  Memo,
+  Passage,
+  Person,
+} from './types'
 
 const MEMOS_BUCKET = 'memos'
+const FAMILY_PHOTOS_BUCKET = 'family-photos'
 const STORYTELLER_KEY = 'fireside-storyteller'
 
 type LifeStageRow = {
@@ -115,6 +126,8 @@ function writeStoryteller(name: string, birthYear: number) {
 
 // --- API ---
 
+// TODO: this always inserts new rows, so saving the life map twice duplicates
+// stages and people. Needs an update/upsert path (or a "replace all") on the backend.
 export async function saveLifeMap(map: LifeMap): Promise<LifeMap> {
   writeStoryteller(map.name, map.birthYear)
 
@@ -217,4 +230,164 @@ export async function updateChapter(
     .single()
   if (error) throw error
   return toChapter(data as ChapterRow)
+}
+
+// --- Families ---
+// No real auth for the hackathon: "who am I" is a member id saved in localStorage,
+// and organizer-only actions are checked in the browser. This is NOT real security —
+// anyone with the anon key can write to these tables directly.
+
+type FamilyRow = { code: string; name: string | null; photo_url: string | null; created_at: string }
+type FamilyMemberRow = {
+  id: number
+  family_code: string
+  name: string
+  role: string
+  relationship?: string | null // only present once the relationship column SQL has run
+  created_at: string
+}
+
+const FAMILY_ROLES: FamilyMember['role'][] = ['organizer', 'storyteller', 'reader', 'member']
+const IDENTITY_KEY = 'fireside-me'
+
+const UNIQUE_VIOLATION = '23505'
+
+function toFamily(row: FamilyRow): Family {
+  return {
+    code: row.code,
+    name: row.name || 'Our family',
+    photoUrl: row.photo_url || undefined,
+    createdAt: row.created_at,
+  }
+}
+
+function toFamilyMember(row: FamilyMemberRow): FamilyMember {
+  return {
+    id: String(row.id),
+    familyCode: row.family_code,
+    name: row.name,
+    role: FAMILY_ROLES.find((r) => r === row.role) ?? 'member',
+    relationship: row.relationship || undefined,
+    createdAt: row.created_at,
+  }
+}
+
+function memberKey(code: string) {
+  return `fireside-member:${code}`
+}
+
+export async function getFamily(code: string): Promise<Family | null> {
+  const { data, error } = await supabase.from('families').select('*').eq('code', code).maybeSingle()
+  if (error) throw error
+  return data ? toFamily(data as FamilyRow) : null
+}
+
+export async function ensureFamily(code: string): Promise<Family> {
+  const { error } = await supabase
+    .from('families')
+    .upsert({ code }, { onConflict: 'code', ignoreDuplicates: true })
+  if (error) throw error
+  const family = await getFamily(code)
+  if (!family) throw new Error(`Family not found after creating it: ${code}`)
+  return family
+}
+
+export async function listFamilyMembers(code: string): Promise<FamilyMember[]> {
+  const { data, error } = await supabase
+    .from('family_members')
+    .select('*')
+    .eq('family_code', code)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return (data as FamilyMemberRow[]).map(toFamilyMember)
+}
+
+async function insertMember(code: string, name: string, role: FamilyMember['role']) {
+  return supabase.from('family_members').insert({ family_code: code, name, role }).select().single()
+}
+
+// The first person to join becomes the organizer. The unique partial index on
+// family_members(family_code) where role = 'organizer' settles races: if someone
+// else became organizer first, the insert fails and we join as a member instead.
+export async function joinFamily(code: string, name: string): Promise<FamilyMember> {
+  await ensureFamily(code)
+
+  const { count, error: countError } = await supabase
+    .from('family_members')
+    .select('id', { count: 'exact', head: true })
+    .eq('family_code', code)
+    .eq('role', 'organizer')
+  if (countError) throw countError
+
+  if (!count) {
+    const { data, error } = await insertMember(code, name, 'organizer')
+    if (!error) return toFamilyMember(data as FamilyMemberRow)
+    if (error.code !== UNIQUE_VIOLATION) throw error
+  }
+
+  const { data, error } = await insertMember(code, name, 'member')
+  if (error) throw error
+  return toFamilyMember(data as FamilyMemberRow)
+}
+
+// Resizes in the browser (max 1600px, JPEG ~0.85), uploads to
+// family-photos/<code>/cover.jpg and saves a cache-busted public URL on the family.
+export async function uploadFamilyPhoto(code: string, file: File): Promise<string> {
+  const jpeg = await resizeImage(file)
+  const path = `${code}/cover.jpg`
+
+  const { error: uploadError } = await supabase.storage
+    .from(FAMILY_PHOTOS_BUCKET)
+    .upload(path, jpeg, { contentType: 'image/jpeg', upsert: true })
+  if (uploadError) throw uploadError
+
+  const { data: urlData } = supabase.storage.from(FAMILY_PHOTOS_BUCKET).getPublicUrl(path)
+  const photoUrl = `${urlData.publicUrl}?v=${Date.now()}`
+
+  const { error } = await supabase.from('families').update({ photo_url: photoUrl }).eq('code', code)
+  if (error) throw error
+  return photoUrl
+}
+
+export function getCurrentMember(code: string): string | null {
+  try {
+    return localStorage.getItem(memberKey(code))
+  } catch {
+    return null
+  }
+}
+
+export function saveCurrentMember(code: string, memberId: string) {
+  try {
+    localStorage.setItem(memberKey(code), memberId)
+  } catch {
+    // Storage unavailable — they'll be asked for their name again next visit.
+  }
+}
+
+// "Who am I" across screens (header initials, which family /family opens).
+// Same caveat as above: localStorage only, not real identity.
+export type MyIdentity = { code: string; name: string }
+
+export function getMyIdentity(): MyIdentity | null {
+  try {
+    const raw = localStorage.getItem(IDENTITY_KEY)
+    return raw ? (JSON.parse(raw) as MyIdentity) : null
+  } catch {
+    return null
+  }
+}
+
+export function saveMyIdentity(identity: MyIdentity) {
+  try {
+    localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity))
+  } catch {
+    // Storage unavailable — header falls back to the life map name.
+  }
+}
+
+// Synchronous best guess at the current user's name: family identity first,
+// then the storyteller name saved by saveLifeMap.
+export function getMyName(): string | null {
+  return getMyIdentity()?.name || readStoryteller()?.name || null
 }
