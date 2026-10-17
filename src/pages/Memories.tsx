@@ -1,7 +1,7 @@
 // Every memo with its transcript and AI tags, grouped by life stage (timeline) or by place.
 // Each life stage can be turned into a draft chapter, which then shows up in Review.
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { generateChapter, getLifeMap, listMemos } from '../api'
 import type { LifeStage, Memo } from '../types'
 
@@ -168,7 +168,17 @@ function MemoCard({ memo, stageLabel }: { memo: Memo; stageLabel?: string }) {
       {memo.transcript && <Transcript memo={memo} />}
 
       {memo.audioUrl && <audio controls src={memo.audioUrl} className="mt-3 w-full" />}
-      <p className="mt-2 text-sm text-stone-400">Recorded {new Date(memo.createdAt).toLocaleString()}</p>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-stone-400">Recorded {new Date(memo.createdAt).toLocaleString()}</p>
+        {memo.transcript && !t?.sensitive && (
+          <Link
+            to={`/storytime/${memo.id}`}
+            className="rounded-full bg-amber-100 px-4 py-1.5 text-base font-semibold text-amber-900 hover:bg-amber-200"
+          >
+            ✨ Storytime
+          </Link>
+        )}
+      </div>
     </li>
   )
 }

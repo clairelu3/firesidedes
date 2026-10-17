@@ -16,7 +16,10 @@ export type MemoTags = {
   tone?: string
   sensitive?: boolean
   sensitivity_reason?: string | null
+  storybook?: Storybook // Storytime version, cached by the backend
 }
+export type StorybookPage = { text: string; text_native: string | null; illustration: string }
+export type Storybook = { title: string; pages: StorybookPage[] }
 export type Memo = { id: string; audioUrl: string; transcript?: string; createdAt: string; stageId?: string; tags?: MemoTags }
 export type Passage = { text: string; memoId: string }
 export type Chapter = { id: string; title: string; stageId: string; passages: Passage[]; status: 'draft' | 'approved' | 'hidden' }
