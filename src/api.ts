@@ -3,7 +3,7 @@
 // touching src/pages/. DB ids are integers; the app uses strings.
 
 import { supabase } from './lib/supabase'
-import type { Chapter, LifeMap, LifeStage, Memo, MemoTags, Passage, Person } from './types'
+import type { Chapter, LifeMap, LifeStage, Memo, MemoTags, Passage, Person, Storybook } from './types'
 
 const STORYTELLER_KEY = 'fireside-storyteller'
 
@@ -180,6 +180,13 @@ export async function uploadMemo(blob: Blob): Promise<Memo> {
   const res = await fetch('/api/memos', { method: 'POST', body: form })
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? `Upload failed (${res.status})`)
   return toMemo((await res.json()) as MemoRow)
+}
+
+/** Storytime: one memo as a rhyming kids' picture book. Cached on the memo; regenerate makes a new version. */
+export async function makeStorybook(memoId: string, regenerate = false): Promise<Storybook> {
+  const res = await fetch(`/api/memos/${encodeURIComponent(memoId)}/storybook?regenerate=${regenerate}`, { method: 'POST' })
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? `Storytime failed (${res.status})`)
+  return res.json()
 }
 
 /** AI writes a draft chapter from every memo placed in this life stage. */

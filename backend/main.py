@@ -155,6 +155,31 @@ def list_memos(stage_id: int | None = None):
     return query.execute().data
 
 
+@router.post("/memos/{memo_id}/storybook")
+def post_storybook(memo_id: int, regenerate: bool = False):
+    """Storytime: turn one memo into a rhyming kids' picture book. Saved in memos.tags.storybook."""
+    rows = sb.table("memos").select("*").eq("id", memo_id).execute().data
+    if not rows:
+        raise HTTPException(404, "Memo not found")
+    memo = rows[0]
+    tags = memo.get("tags") or {}
+    if tags.get("sensitive"):
+        raise HTTPException(403, "This memory is private, so it can't become a storybook.")
+    if not memo.get("transcript"):
+        raise HTTPException(400, "This memory hasn't been transcribed yet.")
+    if tags.get("storybook") and not regenerate:
+        return tags["storybook"]
+
+    stage = None
+    if memo.get("stage_id") is not None:
+        found = sb.table("life_stages").select("*").eq("id", memo["stage_id"]).execute().data
+        stage = found[0] if found else None
+
+    book = ai.write_storybook(memo, stage, get_people())
+    sb.table("memos").update({"tags": {**tags, "storybook": book}}).eq("id", memo_id).execute()
+    return book
+
+
 # ---------- Chapters ----------
 
 @router.post("/chapters/generate")

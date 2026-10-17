@@ -16,6 +16,9 @@ MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1")
 TRANSCRIBE_MODEL = os.getenv("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-transcribe")
 
 client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+if not client:
+    print("\n⚠️  OPENAI_API_KEY is not set in backend/.env: transcription, tagging, chapters and Storytime "
+          "will return stub text. Add the key and restart the backend.\n", flush=True)
 
 
 # ---------- Helpers ----------
@@ -245,3 +248,72 @@ def write_chapter(stage: dict, memos: list[dict]) -> dict:
             "sensitive": draft["sensitive"] or any((m.get("tags") or {}).get("sensitive") for m in memos),
         },
     }
+
+
+# ---------- Storytime: a memo as a rhyming kids' picture book ----------
+
+STORYBOOK_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["title", "pages"],
+    "properties": {
+        "title": {"type": "string", "description": "Playful picture-book title, e.g. 'The Mango Thief of Tainan'."},
+        "pages": {
+            "type": "array",
+            "description": "4 to 8 pages, as many as the memory supports.",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["text", "text_native", "illustration"],
+                "properties": {
+                    "text": {"type": "string", "description": "2 to 4 short rhyming lines in English, separated by newlines."},
+                    "text_native": {
+                        "type": ["string", "null"],
+                        "description": "The same page as 1 to 2 simple lines in the storyteller's language (null if she spoke English).",
+                    },
+                    "illustration": {"type": "string", "description": "One sentence describing the picture for this page."},
+                },
+            },
+        },
+    },
+}
+
+STORYBOOK_SYSTEM = """You turn one of a grandparent's real memories into a short rhyming picture book for her grandchildren, ages 4 to 7.
+
+Style: bouncy rhythm, simple words, rhyming couplets, playful repetition and sound words (whoosh, splash). The general feel of classic rhyming picture books, but do not imitate any specific author, and do not use any existing characters or famous lines.
+
+Truth rules (most important):
+- Every action, event, cause, and outcome must come from the memory. Do not add new actions (no extra trips, accidents, objects, or vehicles), and do not explain why something happened if she didn't say why. If she says Mom was angry, Mom was angry: don't invent the reason.
+- You may exaggerate feelings ("they laughed for a hundred days"), add sound words, and describe the setting she named (the street, the house, the weather of that place), but nothing that changes what happened.
+- Do not invent an ending or resolution. If the memory stops at "Mom was angry", end there: land warmly through the narrator looking back ("and Grandma still smiles when she tells it"), not by changing what happened.
+- Relationship words mean what she said: "Mom" / 媽媽 is her mother. Only the people listed in the roster below appear in this memory.
+- A short memory makes a short book: use fewer pages rather than padding with invented scenes.
+- Use people's nicknames as she says them (Ah-Wei, Ah-Ma). The people roster tells you who is who: a nickname and a full name are the same person, never two characters. Tell it about her as a child ("When Grandma was small...").
+- Keep it gentle. If anything in the memory is scary or sad, soften it for a young child without making it untrue.
+
+Format:
+- 4 to 8 pages. Page 1 sets the scene (where and when, in kid terms). The last page lands warmly.
+- text_native: if she spoke a language other than English, give each page one or two simple lines in that language (Traditional characters for Taiwanese Mandarin) so she can read it aloud with the kids. Use null on every page if she spoke English."""
+
+
+def write_storybook(memo: dict, stage: dict | None, people: list[dict] | None = None) -> dict:
+    """Memo (+ its life stage) -> {"title": str, "pages": [{"text", "text_native", "illustration"}]}."""
+    if not client:
+        return {"title": "Storytime (stub)", "pages": [{"text": "Set OPENAI_API_KEY\nto make a storybook.", "text_native": None, "illustration": ""}]}
+
+    tags = memo.get("tags") or {}
+    # Only the roster people tagged in this memory, so the model can't pull in relatives who aren't in it.
+    in_memo = set(tags.get("people") or [])
+    people = [p for p in (people or []) if p["name"] in in_memo]
+    stage_line = f"{stage['label']}, {stage.get('place') or ''} ({stage.get('start_year') or '?'}–{stage.get('end_year') or '?'})" if stage else "unknown"
+    return _call_json(
+        "storybook",
+        STORYBOOK_SYSTEM,
+        f"<life_stage>{stage_line}</life_stage>\n"
+        f"<language>{tags.get('language') or 'unknown'}</language>\n"
+        f"{_context([], people or []).split('</life_map>')[1].strip()}\n"
+        f"<memory_original>{memo.get('transcript') or ''}</memory_original>\n"
+        f"<memory_english>{tags.get('transcript_en') or memo.get('transcript') or ''}</memory_english>\n\n"
+        "Write the storybook.",
+        STORYBOOK_SCHEMA,
+    )

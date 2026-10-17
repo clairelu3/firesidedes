@@ -2,24 +2,36 @@
 
 Storytellers record short voice memos; AI places them on their life timeline and stitches them into chapters their family can read. Demo mode: one shared bucket of memos, no family accounts.
 
-## Run it
+## Run it (Mac)
 
-**Backend** (FastAPI, port 8000):
+Needs **Node 20.19+** (22 recommended: `nvm install 22`) and **Python 3.10+**.
+
 ```bash
-cd backend
-python3 -m venv venv && venv/bin/pip install -r requirements.txt
-cp .env.example .env        # SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY
-venv/bin/uvicorn main:app --reload
+git clone git@github.com:riannamarquez/fireside2026.git && cd fireside2026
+npm run setup        # installs everything, creates backend/.env and .env.local from the templates
 ```
 
-**Frontend** (Vite, port 5173, proxies `/api` → backend):
+Fill in the keys (ask Kenza, by DM, never commit them):
+- `backend/.env`: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (Supabase → API keys → Secret key), `OPENAI_API_KEY`
+- `.env.local`: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (Supabase publishable key)
+
+Then:
 ```bash
-npm install                 # .npmrc sets legacy-peer-deps
-npm run dev                 # laptop only
-npm run dev:phone           # HTTPS on your Wi-Fi IP so phones can scan the QR and use the mic
+npm run check-env    # says which keys are missing (never prints them)
+npm start            # backend :8000 + frontend http://localhost:5173 — Ctrl+C stops both
 ```
 
-Demo: open `/qr` on the laptop, scan with a phone → `/r` → record → it shows up placed on the timeline in the live feed.
+Restart `npm start` after changing `backend/.env`; the backend only reads it at startup.
+
+| Page | URL |
+|---|---|
+| Life Map / Record / Memories / Review / Read | http://localhost:5173 |
+| Storytime (kids' book) | Memories → ✨ Storytime on any memory |
+| QR for phones | `/qr` (phones need HTTPS, see below) |
+
+**Phones (demo laptop only):** phones only allow the mic over HTTPS. With `npm start` running, run `npm run tunnel` (needs `brew install cloudflared`) and open the `https://….trycloudflare.com/qr` URL it prints. The QR on that page points at the tunnel.
+
+Troubleshooting: `address already in use` on 8000 → the backend is already running, that's fine. `cd: no such file or directory: backend` → you're already in `backend/`, run from the project root.
 
 ## AI pipeline (`backend/ai.py`, one `OPENAI_API_KEY`)
 

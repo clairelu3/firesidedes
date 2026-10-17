@@ -6,6 +6,7 @@ import QRPage from './pages/QRPage'
 import Reader from './pages/Reader'
 import Record from './pages/Record'
 import Review from './pages/Review'
+import Storytime from './pages/Storytime'
 
 const links = [
   { to: '/', label: 'Life Map' },
@@ -57,6 +58,7 @@ function Layout() {
           <Route path="/review" element={<Review />} />
           <Route path="/read" element={<Reader />} />
           <Route path="/qr" element={<QRPage />} />
+          <Route path="/storytime/:memoId" element={<Storytime />} />
         </Routes>
       </main>
     </div>
