@@ -165,15 +165,41 @@ function MemoCard({ memo, stageLabel }: { memo: Memo; stageLabel?: string }) {
         </div>
       )}
 
-      {memo.transcript && (
-        <details className="mt-3">
-          <summary className="cursor-pointer text-base text-stone-500">Transcript</summary>
-          <p className="mt-2 text-base leading-relaxed text-stone-700">{memo.transcript}</p>
-        </details>
-      )}
+      {memo.transcript && <Transcript memo={memo} />}
 
       {memo.audioUrl && <audio controls src={memo.audioUrl} className="mt-3 w-full" />}
       <p className="mt-2 text-sm text-stone-400">Recorded {new Date(memo.createdAt).toLocaleString()}</p>
     </li>
+  )
+}
+
+// Original-language transcript with an English translation toggle (shown only when they differ).
+function Transcript({ memo }: { memo: Memo }) {
+  const english = memo.tags?.transcript_en
+  const hasTranslation = !!english && english.trim() !== memo.transcript?.trim()
+  const [lang, setLang] = useState<'original' | 'english'>('original')
+  const text = lang === 'english' && hasTranslation ? english : memo.transcript
+
+  return (
+    <details className="mt-3">
+      <summary className="cursor-pointer text-base text-stone-500">
+        Transcript{memo.tags?.language ? ` · ${memo.tags.language}` : ''}
+      </summary>
+      {hasTranslation && (
+        <div className="mt-2 inline-flex rounded-lg border border-stone-300 bg-white p-0.5 text-sm">
+          {(['original', 'english'] as const).map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => setLang(l)}
+              className={`rounded-md px-3 py-1 font-medium ${lang === l ? 'bg-stone-800 text-white' : 'text-stone-700'}`}
+            >
+              {l === 'original' ? `Original${memo.tags?.language ? ` (${memo.tags.language})` : ''}` : 'English'}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="mt-2 text-base leading-relaxed text-stone-700">{text}</p>
+    </details>
   )
 }

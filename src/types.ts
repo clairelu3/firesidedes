@@ -3,6 +3,8 @@ export type Person = { id: string; name: string; nickname?: string; relation: st
 export type LifeMap = { name: string; birthYear: number; stages: LifeStage[]; people: Person[] }
 // AI tags from backend/ai.py tag_memo()
 export type MemoTags = {
+  language?: string
+  transcript_en?: string // English translation; the original is Memo.transcript
   summary?: string
   place?: string | null
   year_start?: number | null
