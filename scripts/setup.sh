@@ -3,6 +3,13 @@
 set -e
 cd "$(dirname "$0")/.."
 
+# Vite + its native binaries need Node 20.19+; older Node silently skips them ("Cannot find native binding").
+if ! node -e 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a>22||a===22&&b>=12||a===21||a===20&&b>=19?0:1)'; then
+  echo "✗ Node $(node -v) is too old. Need 20.19+ (22 recommended)."
+  echo "  With nvm:  nvm install 22 && nvm use 22      Without: https://nodejs.org (LTS)"
+  exit 1
+fi
+
 echo "→ Installing frontend packages"
 npm install
 

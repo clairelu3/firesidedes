@@ -4,6 +4,8 @@ Storytellers record short voice memos; AI places them on their life timeline and
 
 ## Run it (Mac)
 
+Needs **Node 20.19+** (22 recommended: `nvm install 22`) and **Python 3.10+**.
+
 ```bash
 git clone git@github.com:riannamarquez/fireside2026.git && cd fireside2026
 npm run setup        # installs everything, creates backend/.env and .env.local from the templates
