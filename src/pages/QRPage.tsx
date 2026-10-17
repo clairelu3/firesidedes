@@ -58,8 +58,7 @@ export default function QRPage() {
   const stageLabel = (id: number | null) => stages.find((s) => s.id === id)?.label
 
   return (
-    <main className="min-h-screen bg-amber-50 px-4 py-8 text-stone-900">
-      <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-[auto_1fr] md:items-start">
+    <div className="grid gap-6 md:grid-cols-[auto_1fr] md:items-start">
         <section className="flex flex-col items-center gap-4 rounded-2xl bg-white p-6 shadow-sm">
           <div ref={wrapRef}>
             <QRCodeCanvas value={url} size={280} marginSize={2} level="M" />
@@ -102,7 +101,6 @@ export default function QRPage() {
             })}
           </ul>
         </section>
-      </div>
-    </main>
+    </div>
   )
 }
