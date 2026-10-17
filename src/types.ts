@@ -23,3 +23,8 @@ export type Storybook = { title: string; pages: StorybookPage[] }
 export type Memo = { id: string; audioUrl: string; transcript?: string; createdAt: string; stageId?: string; tags?: MemoTags }
 export type Passage = { text: string; memoId: string }
 export type Chapter = { id: string; title: string; stageId: string; passages: Passage[]; status: 'draft' | 'approved' | 'hidden' }
+
+// 'member' is the original role (shown as Reader); storyteller/reader need the roles SQL.
+export type FamilyRole = 'organizer' | 'storyteller' | 'reader' | 'member'
+export type Family = { code: string; name: string; photoUrl?: string; createdAt: string }
+export type FamilyMember = { id: string; familyCode: string; name: string; role: FamilyRole; relationship?: string; createdAt: string }

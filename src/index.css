@@ -1,1 +1,81 @@
 @import "tailwindcss";
+
+@theme {
+  --font-display: "Fraunces", Georgia, serif;
+  --font-serif: "Newsreader", Georgia, serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+
+  --color-ember: #9e4734;
+  --color-ember-dark: #873e2e;
+  --color-ember-tint: #f2ddd3;
+  --color-ink: #2a2622;
+  --color-muted: #77716a;
+  --color-page: #f2f1f5;
+  --color-paper: #ffffff;
+  --color-field: #f2f1f5;
+  --color-sand: #f1ece5;
+  --color-review-bg: #e6e2db;
+  --color-cream: #faf6ee;
+  --color-cream-border: #dccdb5;
+  --color-draft: #f4e8c6;
+  --color-draft-ink: #8a6a28;
+  --color-line: #e7e4e0;
+  --color-quote: #5e5248;
+  --color-peach: #f2c7ae;
+  --color-parchment: #f6e9df;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.04);
+  --shadow-ember: 0 6px 16px rgb(158 71 52 / 0.25);
+  --shadow-float: 0 -2px 8px rgb(0 0 0 / 0.04), 0 12px 32px rgb(0 0 0 / 0.1);
+
+  --animate-halo: halo 1.8s ease-in-out infinite;
+
+  @keyframes halo {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 0.55;
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-page font-sans text-ink antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(158 71 52 / 0.6);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .text-eyebrow {
+    @apply font-sans text-xs font-semibold uppercase tracking-[0.14em] text-ember;
+  }
+  .text-display {
+    @apply font-display font-semibold tracking-[-0.02em] leading-[1.05];
+  }
+  .text-story {
+    @apply font-serif text-xl leading-[1.85] text-ink;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
