@@ -1,6 +1,6 @@
 // POST { family_id, life_stage_id, force? } → write (or rewrite) the draft chapter for one life stage.
 // Approved chapters are locked: they are returned unchanged unless force=true.
-import { callJSON } from '../_shared/claude.ts'
+import { callJSON } from '../_shared/openai.ts'
 import { cors, db, json, loadFamilyContext } from '../_shared/context.ts'
 
 const CHAPTER_SCHEMA = {
@@ -95,6 +95,7 @@ ${m.transcript}
       .join('\n\n')
 
     const draft = await callJSON<Draft>({
+      name: 'chapter',
       system: SYSTEM,
       user: `${ctx.text}
 
@@ -106,7 +107,6 @@ ${memoBlocks}
 
 Write this chapter.`,
       schema: CHAPTER_SCHEMA,
-      effort: 'medium',
     })
 
     const sentences = draft.sentences.map(({ memo_refs, ...s }) => ({

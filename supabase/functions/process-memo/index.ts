@@ -1,5 +1,5 @@
 // POST { memo_id } → transcribe (if needed) + extract + anchor. Updates the memo row and returns it.
-import { callJSON } from '../_shared/claude.ts'
+import { callJSON, OPENAI_API_KEY, TRANSCRIBE_MODEL } from '../_shared/openai.ts'
 import { cors, db, json, loadFamilyContext } from '../_shared/context.ts'
 
 const nullableInt = { type: ['integer', 'null'] }
@@ -69,11 +69,11 @@ Deno.serve(async (req) => {
 
     const ctx = await loadFamilyContext(memo.family_id)
 
-    // 1. Transcribe. Whisper (if OPENAI_API_KEY is set) handles mixed languages better than the
-    //    browser, so it wins; the browser's live transcript is the fallback.
+    // 1. Transcribe. Whisper handles mixed languages better than the browser, so it wins;
+    //    the browser's live transcript is the fallback if Whisper fails.
     const browserTranscript: string = memo.transcript ?? ''
     let transcript = browserTranscript
-    if (memo.audio_path && Deno.env.get('OPENAI_API_KEY')) {
+    if (memo.audio_path && OPENAI_API_KEY) {
       try {
         const vocab = [
           ...ctx.people.flatMap((p) => [p.name, ...(p.nicknames ?? [])]),
@@ -86,14 +86,14 @@ Deno.serve(async (req) => {
         console.warn('Whisper failed, using browser transcript:', e)
       }
     }
-    if (!transcript.trim()) throw new Error('No transcript: browser speech recognition captured nothing and no OPENAI_API_KEY is set')
+    if (!transcript.trim()) throw new Error('No transcript: Whisper and browser speech recognition both came back empty (is OPENAI_API_KEY set?)')
 
     // 2–3. Extract + anchor, with the life map and roster as context.
     const tags = await callJSON<Tags>({
+      name: 'memo_tags',
       system: SYSTEM,
       user: `${ctx.text}\n\n<memo_transcript>\n${transcript}\n</memo_transcript>\n\nTag this memo.`,
       schema: TAG_SCHEMA,
-      effort: 'low',
     })
 
     // Drop any ids the model made up.
@@ -122,18 +122,17 @@ Deno.serve(async (req) => {
 })
 
 async function transcribeWithWhisper(audioPath: string, vocab: string): Promise<string> {
-  const key = Deno.env.get('OPENAI_API_KEY')!
   const { data: blob, error } = await db.storage.from('audio').download(audioPath)
   if (error || !blob) throw new Error(`Could not download audio: ${error?.message}`)
 
   const form = new FormData()
   form.append('file', blob, audioPath.split('/').pop() ?? 'memo.webm')
-  form.append('model', 'whisper-1')
+  form.append('model', TRANSCRIBE_MODEL)
   // Names and places the storyteller uses, so Whisper spells "Ah-Ming" and "Tainan" right.
   if (vocab) form.append('prompt', `Family memory. Names and places: ${vocab}.`)
   const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${key}` },
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
     body: form,
   })
   if (!res.ok) throw new Error(`Whisper failed: ${await res.text()}`)
