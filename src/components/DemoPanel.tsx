@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { demoKeeperRelease, demoReset, demoSetViewer, getViewer, IS_DEMO, type Viewer } from '../api'
 import { getFakeToday, setFakeToday, todayString } from '../lib/today'
-import { Button } from './ui/Button'
+import { SecondaryButton } from './ui/Button'
 
 const OPEN_KEY = 'postscript-demo-panel'
 
@@ -55,9 +55,9 @@ export function DemoPanel() {
   const viewers = viewer?.members ?? []
 
   return (
-    <div className="fixed top-20 right-3 z-50 w-[300px] rounded-3xl bg-paper p-4 shadow-float ring-1 ring-line" role="dialog" aria-label="Demo controls">
+    <div className="fixed top-3 right-3 z-[60] max-h-[calc(100dvh-24px)] w-[290px] overflow-y-auto rounded-[18px] bg-card p-4 font-serif shadow-float ring-1 ring-hairline" role="dialog" aria-label="Demo controls">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-bold tracking-wide text-ink uppercase">Demo controls</p>
+        <p className="text-eyebrow text-ink">Demo controls</p>
         <button
           type="button"
           onClick={() => {
@@ -65,14 +65,14 @@ export function DemoPanel() {
             setOpen(false)
           }}
           aria-label="Close demo controls"
-          className="flex size-9 items-center justify-center rounded-full text-muted hover:bg-field"
+          className="flex size-9 items-center justify-center rounded-full text-muted hover:bg-ink/5"
         >
           <X size={18} aria-hidden="true" />
         </button>
       </div>
       {!IS_DEMO && <p className="mt-1 text-xs text-muted">Supabase mode: reset is off.</p>}
 
-      <p className="mt-3 text-sm font-semibold text-muted">Viewing as</p>
+      <p className="text-meta mt-3">Viewing as</p>
       <div className="mt-2 grid grid-cols-2 gap-2">
         {viewers.map((m) => (
           <button
@@ -80,21 +80,21 @@ export function DemoPanel() {
             type="button"
             onClick={() => demoSetViewer(m.id).then(reload)}
             aria-pressed={viewer?.me?.id === m.id}
-            className={`h-11 rounded-xl text-base font-semibold ${viewer?.me?.id === m.id ? 'bg-ember text-white' : 'bg-field text-ink hover:bg-line'}`}
+            className={`h-11 rounded-xl text-base ${viewer?.me?.id === m.id ? 'bg-pine text-card' : 'bg-parchment text-ink hover:bg-sage'}`}
           >
             {m.name}
           </button>
         ))}
       </div>
 
-      <p className="mt-4 text-sm font-semibold text-muted">Today is {todayString()}</p>
+      <p className="text-meta mt-4">Today is {todayString()}</p>
       <div className="mt-2 flex gap-2">
         <input
           type="date"
           aria-label="Fake today"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="h-11 min-w-0 flex-1 rounded-xl bg-field px-3 text-base text-ink"
+          className="h-11 min-w-0 flex-1 rounded-xl bg-parchment px-3 text-base text-ink"
         />
         <button
           type="button"
@@ -102,7 +102,7 @@ export function DemoPanel() {
             setFakeToday(date || null)
             reload()
           }}
-          className="h-11 rounded-xl bg-field px-3 text-base font-semibold text-ink hover:bg-line"
+          className="h-11 rounded-xl bg-parchment px-3 text-base text-ink hover:bg-sage"
         >
           Set
         </button>
@@ -114,7 +114,7 @@ export function DemoPanel() {
             setFakeToday('2031-06-12')
             reload()
           }}
-          className="h-10 flex-1 rounded-xl bg-field text-sm font-semibold text-ink hover:bg-line"
+          className="h-10 flex-1 rounded-xl bg-parchment text-sm text-ink hover:bg-sage"
         >
           Jun 12, 2031
         </button>
@@ -124,16 +124,15 @@ export function DemoPanel() {
             setFakeToday(null)
             reload()
           }}
-          className="h-10 flex-1 rounded-xl bg-field text-sm font-semibold text-ink hover:bg-line"
+          className="h-10 flex-1 rounded-xl bg-parchment text-sm text-ink hover:bg-sage"
         >
           Real today
         </button>
       </div>
 
       <div className="mt-4 grid gap-2">
-        <Button
-          size="compact"
-          variant="secondary"
+        <SecondaryButton
+          compact
           onClick={() =>
             demoKeeperRelease()
               .then((n) => {
@@ -144,18 +143,17 @@ export function DemoPanel() {
           }
         >
           Keeper releases letters
-        </Button>
+        </SecondaryButton>
         {IS_DEMO && (
-          <Button
-            size="compact"
-            variant="secondary"
+          <SecondaryButton
+            compact
             onClick={() => {
               setFakeToday(null)
               demoReset().then(reload)
             }}
           >
             Reset demo data
-          </Button>
+          </SecondaryButton>
         )}
       </div>
       {message && <p className="mt-2 text-sm text-muted">{message}</p>}

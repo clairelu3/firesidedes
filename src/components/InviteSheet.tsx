@@ -1,7 +1,7 @@
 import { Check, Copy, X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useRef, useState } from 'react'
-import { Button } from './ui/Button'
+import { PrimaryButton } from './ui/Button'
 
 export function InviteSheet({ code, familyName, onClose }: { code: string; familyName: string; onClose: () => void }) {
   const url = `${window.location.origin}/family/${encodeURIComponent(code)}`
@@ -27,44 +27,45 @@ export function InviteSheet({ code, familyName, onClose }: { code: string; famil
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/30" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="invite-title"
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-[480px] rounded-t-3xl bg-paper px-6 pt-6 pb-[calc(24px+env(safe-area-inset-bottom))]"
+        className="bg-paper relative w-full max-w-[430px] rounded-t-[24px] px-6 pt-6 pb-[calc(24px+env(safe-area-inset-bottom))] shadow-float"
       >
         <button
           ref={closeRef}
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-3 right-3 flex size-12 items-center justify-center rounded-full text-muted hover:bg-field"
+          className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-full text-ink hover:bg-ink/5"
         >
-          <X size={22} aria-hidden="true" />
+          <X size={22} strokeWidth={1.5} aria-hidden="true" />
         </button>
-        <h2 id="invite-title" className="text-display pr-12 text-[28px] text-ink">
+        <h2 id="invite-title" className="text-title pr-12">
           Invite your family
         </h2>
-        <p className="mt-2 text-base leading-normal text-muted">
+        <p className="text-body mt-2 text-muted">
           Scan this code or share the link to join {familyName}. They’ll just enter their name.
         </p>
         <div className="mt-6 flex justify-center">
-          <div className="rounded-2xl border border-line bg-paper p-4">
-            <QRCodeSVG value={url} size={196} fgColor="#2A2622" bgColor="#FFFFFF" marginSize={0} level="M" title="Invite QR code" />
+          <div className="surface-card p-4">
+            <QRCodeSVG value={url} size={196} fgColor="#1F4D3A" bgColor="#FBF7EF" marginSize={0} level="M" title="Invite QR code" />
           </div>
         </div>
-        <p className="mt-6 rounded-2xl bg-field px-4 py-3 text-[15px] font-medium break-all text-ink">{url}</p>
-        <Button
+        <p className="text-meta mt-6 rounded-[14px] bg-parchment px-4 py-3 break-all text-ink">{url}</p>
+        <PrimaryButton
           onClick={copy}
-          className="mt-4 w-full"
-          icon={copied ? <Check size={20} aria-hidden="true" /> : <Copy size={20} aria-hidden="true" />}
+          arrow={false}
+          className="mt-4"
+          icon={copied ? <Check size={20} strokeWidth={1.75} aria-hidden="true" /> : <Copy size={20} strokeWidth={1.75} aria-hidden="true" />}
         >
           {copied ? 'Copied' : 'Copy link'}
-        </Button>
+        </PrimaryButton>
         {isLocal && (
-          <p className="mt-4 text-center text-sm leading-normal text-muted">
+          <p className="text-meta mt-4 text-center">
             This link only works on this computer. Run <code className="font-semibold">npm run dev -- --host</code> to
             invite phones on the same Wi-Fi.
           </p>

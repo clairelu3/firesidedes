@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router'
 import { getLifeMap, getMyName, LIFE_MAP_REPLACES_ON_SAVE, saveLifeMap } from '../api'
 import { AppShell } from '../components/ui/AppShell'
 import { Avatar } from '../components/ui/Avatar'
-import { StepCard } from '../components/ui/Card'
+import { IconButton, TextButton } from '../components/ui/Button'
+import { Card, TitledCard } from '../components/ui/Card'
+import { Notice } from '../components/ui/Notice'
 import { DashedAddButton } from '../components/ui/DashedAddButton'
 import { Field } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -107,6 +109,7 @@ export default function Life() {
 
   return (
     <AppShell
+      back="/family"
       floatingHeight={STICKY_ACTION_BAR_HEIGHT}
       floating={
         <StickyActionBar
@@ -126,7 +129,7 @@ export default function Life() {
       />
 
       {step === 1 && (
-        <StepCard step={1} title="About you" subtitle="Just the basics, so your stories start in the right place.">
+        <TitledCard step={1} title="About you" subtitle="Just the basics, so your stories start in the right place.">
           <div className="space-y-5">
             <Field label="Your name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
             <Field
@@ -137,23 +140,23 @@ export default function Life() {
               onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, ''))}
             />
           </div>
-        </StepCard>
+        </TitledCard>
       )}
 
       {step === 2 && (
-        <StepCard step={2} title="The chapters of your life" subtitle="Break your story into places and seasons that feel natural to you.">
+        <TitledCard step={2} title="The chapters of your life" subtitle="Break your story into places and seasons that feel natural to you.">
           <ol className="relative">
             {stages.map((stage) => {
               const editing = stage.id === editingStage
               return (
                 <li key={stage.id} className="relative pl-9">
                   {/* timeline line + ring dot */}
-                  <span className="absolute top-0 bottom-0 left-[7px] w-0.5 bg-ember" aria-hidden="true" />
+                  <span className="absolute top-0 bottom-0 left-[7px] w-px bg-pine/40" aria-hidden="true" />
                   <span
-                    className={`absolute left-0 flex size-4 items-center justify-center rounded-full border-2 border-ember bg-paper ${editing ? 'top-0.5' : 'top-[26px]'}`}
+                    className={`absolute left-0 flex size-[15px] items-center justify-center rounded-full border-[1.5px] border-pine bg-card ${editing ? 'top-0.5' : 'top-[22px]'}`}
                     aria-hidden="true"
                   >
-                    <span className="size-1.5 rounded-full bg-ember" />
+                    <span className="size-1.5 rounded-full bg-vermilion" />
                   </span>
 
                   {editing ? (
@@ -171,25 +174,18 @@ export default function Life() {
                         onChange={(e) => updateStage(stage.id, { livedWith: e.target.value })}
                       />
                       <div className="flex justify-end">
-                        <button type="button" onClick={() => setEditingStage(null)} className="h-12 rounded-xl px-4 text-base font-semibold text-ember hover:bg-ember-tint/50">
-                          Done
-                        </button>
+                        <TextButton onClick={() => setEditingStage(null)}>Done</TextButton>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 border-b border-line py-4">
+                    <div className="flex items-center gap-3 border-b border-hairline py-3.5">
                       <div className="min-w-0 flex-1">
-                        <p className="text-display truncate text-[22px] text-ink">{stage.label || 'Untitled stage'}</p>
-                        <p className="mt-1 truncate text-[15px] text-muted">{[stageRange(stage), stage.place].filter(Boolean).join(' · ') || 'Add years and a place'}</p>
+                        <p className="text-card-title truncate">{stage.label || 'Untitled stage'}</p>
+                        <p className="text-meta truncate">{[stageRange(stage), stage.place].filter(Boolean).join(' · ') || 'Add years and a place'}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setEditingStage(stage.id)}
-                        aria-label={`Edit ${stage.label || 'life stage'}`}
-                        className="flex size-12 shrink-0 items-center justify-center rounded-full text-muted hover:bg-field hover:text-ink"
-                      >
-                        <Pencil size={20} aria-hidden="true" />
-                      </button>
+                      <IconButton label={`Edit ${stage.label || 'life stage'}`} onClick={() => setEditingStage(stage.id)}>
+                        <Pencil size={19} strokeWidth={1.5} aria-hidden="true" />
+                      </IconButton>
                     </div>
                   )}
                 </li>
@@ -198,7 +194,7 @@ export default function Life() {
           </ol>
           {/* the line turns grey past the last stage */}
           <div className="relative pt-4 pl-9">
-            <span className="absolute top-0 left-[7px] h-4 w-0.5 bg-line" aria-hidden="true" />
+            <span className="absolute top-0 left-[7px] h-4 w-px bg-hairline" aria-hidden="true" />
             <DashedAddButton
               onClick={() => {
                 const s = newStage()
@@ -209,67 +205,56 @@ export default function Life() {
               Add another life stage
             </DashedAddButton>
           </div>
-        </StepCard>
+        </TitledCard>
       )}
 
       {step === 3 && (
-        <StepCard step={3} title="Your people" subtitle="Add the names that come up most often in your stories. Birthdays let you seal a letter for a special day.">
-          <ul className="space-y-3">
+        <TitledCard step={3} title="Your people" subtitle="Add the names that come up most often in your stories. Birthdays let you seal a letter for a special day.">
+          <ul className="divide-y divide-hairline">
             {people.map((person) =>
               person.id === editingPerson ? (
-                <li key={person.id} className="space-y-4 rounded-2xl bg-field p-4">
-                  <Field label="Name" tone="paper" placeholder="Mei-Ling" value={person.name} onChange={(e) => updatePerson(person.id, { name: e.target.value })} />
-                  <Field label="Nickname" tone="paper" placeholder="Optional" value={person.nickname ?? ''} onChange={(e) => updatePerson(person.id, { nickname: e.target.value })} />
-                  <Field label="Relationship" tone="paper" placeholder="Cousin" value={person.relation} onChange={(e) => updatePerson(person.id, { relation: e.target.value })} />
-                  <Field label="Birthday" tone="paper" type="date" value={person.birthday ?? ''} onChange={(e) => updatePerson(person.id, { birthday: e.target.value || undefined })} />
+                <li key={person.id} className="py-3">
+                  <Card tone="parchment" className="space-y-4 p-4">
+                  <Field label="Name" placeholder="Mei-Ling" value={person.name} onChange={(e) => updatePerson(person.id, { name: e.target.value })} />
+                  <Field label="Nickname" placeholder="Optional" value={person.nickname ?? ''} onChange={(e) => updatePerson(person.id, { nickname: e.target.value })} />
+                  <Field label="Relationship" placeholder="Cousin" value={person.relation} onChange={(e) => updatePerson(person.id, { relation: e.target.value })} />
+                  <Field label="Birthday" type="date" value={person.birthday ?? ''} onChange={(e) => updatePerson(person.id, { birthday: e.target.value || undefined })} />
                   {(person.specialDates ?? []).map((d, i) => (
-                    <div key={i} className="space-y-3 rounded-2xl border border-line p-3">
+                    <div key={i} className="space-y-3 rounded-[14px] border border-hairline p-3">
                       <div className="flex items-end gap-2">
-                        <Field label="Special date" tone="paper" className="min-w-0 flex-1" placeholder="Wedding day" value={d.label} onChange={(e) => updateSpecialDate(person, i, { label: e.target.value })} />
-                        <button
-                          type="button"
-                          onClick={() => updatePerson(person.id, { specialDates: (person.specialDates ?? []).filter((_, j) => j !== i) })}
-                          aria-label={`Remove ${d.label || 'special date'}`}
-                          className="flex size-12 shrink-0 items-center justify-center rounded-full text-muted hover:bg-line hover:text-ink"
-                        >
-                          <X size={20} aria-hidden="true" />
-                        </button>
+                        <Field label="Special date" className="min-w-0 flex-1" placeholder="Wedding day" value={d.label} onChange={(e) => updateSpecialDate(person, i, { label: e.target.value })} />
+                        <IconButton label={`Remove ${d.label || 'special date'}`} className="mb-1.5" onClick={() => updatePerson(person.id, { specialDates: (person.specialDates ?? []).filter((_, j) => j !== i) })}>
+                          <X size={19} strokeWidth={1.5} aria-hidden="true" />
+                        </IconButton>
                       </div>
-                      <Field label="Date" tone="paper" type="date" value={d.date} onChange={(e) => updateSpecialDate(person, i, { date: e.target.value })} />
+                      <Field label="Date" type="date" value={d.date} onChange={(e) => updateSpecialDate(person, i, { date: e.target.value })} />
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => updatePerson(person.id, { specialDates: [...(person.specialDates ?? []), { label: '', date: '' }] })}
-                    className="flex h-12 items-center gap-2 rounded-xl px-2 text-base font-semibold text-ember hover:bg-ember-tint/60"
-                  >
-                    <Plus size={18} strokeWidth={2.5} aria-hidden="true" />
-                    Add a special date
-                  </button>
-                  <div className="flex justify-end">
-                    <button type="button" onClick={() => setEditingPerson(null)} className="h-12 rounded-xl px-4 text-base font-semibold text-ember hover:bg-ember-tint/60">
-                      Done
-                    </button>
+                  <div className="flex items-center justify-between">
+                    <TextButton
+                      className="-ml-3"
+                      onClick={() => updatePerson(person.id, { specialDates: [...(person.specialDates ?? []), { label: '', date: '' }] })}
+                      icon={<Plus size={17} strokeWidth={1.75} aria-hidden="true" />}
+                    >
+                      Add a special date
+                    </TextButton>
+                    <TextButton onClick={() => setEditingPerson(null)}>Done</TextButton>
                   </div>
+                  </Card>
                 </li>
               ) : (
-                <li key={person.id} className="flex items-center gap-4 rounded-2xl bg-field p-3 pr-2">
-                  <Avatar name={person.name} size={48} variant="tint" maxLetters={1} />
+                <li key={person.id} className="flex items-center gap-4 py-3">
+                  <Avatar name={person.name} size={48} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-lg font-bold text-ink">{person.name || 'New person'}</p>
-                    <p className="truncate text-sm text-muted">
+                    <p className="text-card-title truncate">{person.name || 'New person'}</p>
+                    <p className="text-meta truncate">
                       {[person.nickname && `“${person.nickname}”`, person.relation, person.birthday && `Born ${formatDay(person.birthday, 'short')}`].filter(Boolean).join(' · ') ||
                         'Tap the pencil to add details'}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditingPerson(person.id)}
-                    aria-label={`Edit ${person.name || 'person'}`}
-                    className="flex size-12 shrink-0 items-center justify-center rounded-full text-muted hover:bg-line hover:text-ink"
-                  >
-                    <Pencil size={20} aria-hidden="true" />
-                  </button>
+                  <IconButton label={`Edit ${person.name || 'person'}`} onClick={() => setEditingPerson(person.id)}>
+                    <Pencil size={19} strokeWidth={1.5} aria-hidden="true" />
+                  </IconButton>
                 </li>
               ),
             )}
@@ -285,13 +270,13 @@ export default function Life() {
               Add a key person
             </DashedAddButton>
           </div>
-        </StepCard>
+        </TitledCard>
       )}
 
       {error && (
-        <p className="mt-4 rounded-2xl bg-ember-tint px-4 py-3 text-base text-ember-dark" role="alert">
+        <Notice tone="error" className="mt-4">
           We couldn’t save your life map. Please try again.
-        </p>
+        </Notice>
       )}
     </AppShell>
   )

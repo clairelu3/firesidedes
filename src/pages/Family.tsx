@@ -14,13 +14,15 @@ import {
   uploadFamilyPhoto,
   type LetterShelf,
 } from '../api'
-import { EnvelopeCard } from '../components/EnvelopeCard'
 import { InviteSheet } from '../components/InviteSheet'
 import { AppShell } from '../components/ui/AppShell'
 import { Avatar } from '../components/ui/Avatar'
-import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
+import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/Button'
+import { Card, TitledCard } from '../components/ui/Card'
+import { EnvelopeCard } from '../components/ui/EnvelopeCard'
 import { Field } from '../components/ui/Field'
+import { Illustration } from '../components/ui/Illustration'
+import { Notice } from '../components/ui/Notice'
 import { PageHeader } from '../components/ui/PageHeader'
 import { RoleBadge } from '../components/ui/RoleBadge'
 import { NotAnImageError } from '../lib/image'
@@ -74,7 +76,7 @@ export default function Family() {
     return (
       <AppShell>
         <PageHeader counter="1 of 2" title={TITLE} subtitle={SUBTITLE} />
-        <p className="text-center text-lg text-muted">Loading your family…</p>
+        <p className="text-body text-center text-muted">Loading your family…</p>
       </AppShell>
     )
   }
@@ -83,9 +85,7 @@ export default function Family() {
     return (
       <AppShell>
         <PageHeader counter="1 of 2" title={TITLE} subtitle={SUBTITLE} />
-        <Card>
-          <p className="text-lg text-ink">We couldn’t load this family. Check your connection and refresh the page.</p>
-        </Card>
+        <Notice tone="error">We couldn’t load this family. Check your connection and refresh the page.</Notice>
       </AppShell>
     )
   }
@@ -114,7 +114,7 @@ export default function Family() {
     <AppShell>
       <PageHeader counter="1 of 2" title={TITLE} subtitle={SUBTITLE} />
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         <CoverCard
           code={code}
           familyName={familyName}
@@ -126,30 +126,24 @@ export default function Family() {
 
         <EnvelopeWall />
 
-        <Card>
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className="text-display text-[28px] text-ink">Family roles</h2>
-            <p className="shrink-0 text-sm font-medium text-muted">
-              {members.length} {members.length === 1 ? 'person' : 'people'}
-            </p>
-          </div>
-          <p className="mt-2 text-[15px] leading-normal text-muted">
-            Everyone can have more than one role, but each family has one organizer.
-          </p>
-
-          <ul className="mt-2 divide-y divide-line">
+        <TitledCard
+          title="Family roles"
+          aside={`${members.length} ${members.length === 1 ? 'person' : 'people'}`}
+          subtitle="Everyone can have more than one role, but each family has one organizer."
+        >
+          <ul className="-mt-2 divide-y divide-hairline">
             {members.map((m) => {
               const isMe = m.id === me.id
               const subtext = m.relationship ?? (m.role === 'organizer' ? 'Started this family' : undefined)
               return (
-                <li key={m.id} className="flex items-center gap-4 py-4">
-                  <Avatar name={m.name} size={56} variant={isMe ? 'ember' : 'sand'} />
+                <li key={m.id} className="flex items-center gap-4 py-3.5">
+                  <Avatar name={m.name} size={52} />
                   <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-lg leading-snug font-bold break-words text-ink">
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-serif text-[19px] leading-snug break-words text-ink">
                       <span className="min-w-0">{m.name}</span>
-                      {isMe && <span className="shrink-0 rounded-md bg-field px-1.5 py-0.5 text-xs font-semibold text-muted">You</span>}
+                      {isMe && <span className="text-meta shrink-0">· you</span>}
                     </p>
-                    {subtext && <p className="text-sm leading-snug text-muted">{subtext}</p>}
+                    {subtext && <p className="text-meta">{subtext}</p>}
                   </div>
                   <RoleBadge role={m.role} />
                 </li>
@@ -157,33 +151,21 @@ export default function Family() {
             })}
           </ul>
 
-          <button
-            type="button"
-            onClick={() => setInviting(true)}
-            className="mx-auto mt-2 flex h-12 items-center gap-2 rounded-xl px-4 text-lg font-semibold text-ember hover:bg-ember-tint/50"
-          >
-            <Plus size={20} strokeWidth={2.5} aria-hidden="true" />
-            Invite a family member
-          </button>
-
-          <div className="mt-4 flex gap-4 rounded-2xl bg-field p-5">
-            <Users size={24} className="mt-0.5 shrink-0 text-ember" aria-hidden="true" />
-            <div>
-              <p className="text-base font-bold text-ink">What does the organizer do?</p>
-              <p className="mt-1 text-[15px] leading-normal text-muted">
-                Manages invites, the family cover, and who can see or contribute stories.
-              </p>
-            </div>
+          <div className="mt-2 text-center">
+            <TextButton onClick={() => setInviting(true)} icon={<Plus size={18} strokeWidth={1.75} aria-hidden="true" />}>
+              Invite a family member
+            </TextButton>
           </div>
-        </Card>
 
-        <div>
-          <Button chevron className="w-full" onClick={() => navigate('/life')}>
-            Continue to your life map
-          </Button>
-          <p className="mt-4 text-center text-sm leading-normal text-muted">
-            Your family space is private. Only invited members can enter.
-          </p>
+          <Notice className="mt-4" icon={<Users size={20} strokeWidth={1.5} className="text-pine" aria-hidden="true" />}>
+            <p className="font-medium">What does the organizer do?</p>
+            <p className="text-meta mt-1 text-[15px]">Manages invites, the family cover, and who can see or contribute stories.</p>
+          </Notice>
+        </TitledCard>
+
+        <div className="pt-2">
+          <PrimaryButton onClick={() => navigate('/life')}>Continue to your life map</PrimaryButton>
+          <p className="text-meta mt-4 text-center">Your family space is private. Only invited members can enter.</p>
         </div>
       </div>
 
@@ -229,19 +211,13 @@ function JoinScreen({ family, onJoin }: { family: FamilyType | null; onJoin: (na
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          {error && (
-            <p className="rounded-2xl bg-ember-tint px-4 py-3 text-base text-ember-dark" role="alert">
-              Something went wrong. Please try again.
-            </p>
-          )}
-          <Button type="submit" chevron disabled={joining || !name.trim()} className="w-full">
+          {error && <Notice tone="error">Something went wrong. Please try again.</Notice>}
+          <PrimaryButton type="submit" disabled={joining || !name.trim()}>
             {joining ? 'Joining…' : family ? 'Join family' : 'Start our family'}
-          </Button>
+          </PrimaryButton>
         </form>
       </Card>
-      <p className="mt-4 text-center text-sm leading-normal text-muted">
-        Your family space is private. Only invited members can enter.
-      </p>
+      <p className="text-meta mt-4 text-center">Your family space is private. Only invited members can enter.</p>
     </>
   )
 }
@@ -299,25 +275,25 @@ function CoverCard({
   return (
     <div>
       {src ? (
-        <div className="relative h-[340px] overflow-hidden rounded-3xl bg-sand">
+        <div className="relative h-[300px] overflow-hidden rounded-card bg-parchment shadow-card">
           <img src={src} alt={`${familyName} cover photo`} className="absolute inset-0 size-full object-cover" />
-          <div className="absolute inset-x-0 bottom-0 h-[60%] bg-linear-to-t from-black/75 via-black/35 to-transparent" />
-          <div className="absolute right-6 bottom-6 left-6 text-white">
-            {showThe && <p className="text-xs font-semibold tracking-[0.14em] text-white/70">THE</p>}
-            <p className="text-display mt-1 text-[44px]">{familyName}</p>
-            <p className="mt-2 text-[11px] font-semibold tracking-[0.18em] text-white/80">OUR STORIES · SINCE {since}</p>
+          <div className="absolute inset-x-0 bottom-0 h-[60%] bg-linear-to-t from-ink/75 via-ink/30 to-transparent" />
+          <div className="absolute right-6 bottom-6 left-6 text-card">
+            {showThe && <p className="text-eyebrow text-card/75">The</p>}
+            <p className="text-display-xl mt-1 text-card">{familyName}</p>
+            <p className="text-eyebrow mt-3 text-card/80">Our stories · since {since}</p>
           </div>
           {isOrganizer && !preview && (
-            <label className="absolute top-4 right-4 inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-paper px-4 text-[15px] font-semibold text-ink shadow-card focus-within:ring-2 focus-within:ring-ember/40 hover:bg-field">
-              <Camera size={18} aria-hidden="true" />
+            <label className="absolute top-4 right-4 inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-card px-4 font-serif text-[15px] text-ink shadow-card focus-within:ring-2 focus-within:ring-pine/30 hover:bg-parchment">
+              <Camera size={18} strokeWidth={1.5} aria-hidden="true" />
               Change cover
               {fileInput}
             </label>
           )}
           {preview && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/25">
-              <span className="inline-flex h-11 items-center gap-2 rounded-full bg-paper px-5 text-[15px] font-semibold text-ink">
-                <LoaderCircle size={18} className="motion-safe:animate-spin" aria-hidden="true" />
+            <div className="absolute inset-0 flex items-center justify-center bg-ink/25">
+              <span className="inline-flex h-11 items-center gap-2 rounded-full bg-card px-5 font-serif text-[15px] text-ink">
+                <LoaderCircle size={18} strokeWidth={1.5} className="motion-safe:animate-spin" aria-hidden="true" />
                 Uploading…
               </span>
             </div>
@@ -329,9 +305,9 @@ function CoverCard({
         </CoverPlaceholder>
       )}
       {error && (
-        <p className="mt-3 rounded-2xl bg-ember-tint px-4 py-3 text-base text-ember-dark" role="alert">
+        <Notice tone="error" className="mt-3">
           {error}
-        </p>
+        </Notice>
       )}
     </div>
   )
@@ -350,22 +326,21 @@ function CoverPlaceholder({
 }) {
   const content = (
     <>
-      <span className="flex size-16 items-center justify-center rounded-full bg-paper text-ember">
-        <Camera size={28} aria-hidden="true" />
+      <Illustration slot="house-tainan" className="absolute inset-0 opacity-70" />
+      <span className="relative flex size-14 items-center justify-center rounded-full bg-card text-pine shadow-card">
+        <Camera size={24} strokeWidth={1.5} aria-hidden="true" />
       </span>
-      <span className="text-display mt-4 text-[26px] text-ink">
-        {isOrganizer ? 'Add a family photo' : familyName}
-      </span>
-      <span className="mt-2 max-w-[260px] text-base leading-normal text-muted">
+      <span className="text-title relative mt-4">{isOrganizer ? 'Add a family photo' : familyName}</span>
+      <span className="text-body relative mt-2 max-w-[260px] text-muted">
         {isOrganizer ? 'A photo everyone will see when they open Postscript.' : 'Your organizer hasn’t added a photo yet.'}
       </span>
-      <span className="mt-5 text-[11px] font-semibold tracking-[0.18em] text-muted">OUR STORIES · SINCE {since}</span>
+      <span className="text-eyebrow relative mt-5">Our stories · since {since}</span>
     </>
   )
-  const className = 'flex h-[340px] flex-col items-center justify-center rounded-3xl bg-sand px-6 text-center'
+  const className = 'relative flex h-[300px] flex-col items-center justify-center overflow-hidden rounded-card px-6 text-center shadow-card'
   if (!isOrganizer) return <div className={className}>{content}</div>
   return (
-    <label className={`${className} cursor-pointer border-[1.5px] border-dashed border-cream-border hover:bg-cream focus-within:ring-2 focus-within:ring-ember/40`}>
+    <label className={`${className} cursor-pointer focus-within:ring-2 focus-within:ring-pine/30`}>
       {content}
       {children}
     </label>
@@ -390,15 +365,15 @@ function EnvelopeWall() {
   if (shelf.isStoryteller) {
     return (
       <Card>
-        <h2 className="text-display text-[28px] text-ink">Your letters</h2>
-        <p className="mt-2 text-[15px] leading-normal text-muted">
+        <h2 className="text-heading">Your letters</h2>
+        <p className="text-meta mt-2 text-[15px]">
           {shelf.waitingForOthers > 0
             ? `You have ${shelf.waitingForOthers} sealed ${shelf.waitingForOthers === 1 ? 'letter' : 'letters'} waiting for your family.`
             : 'Write a letter to your family, or keep one sealed for a special day.'}
         </p>
-        <Button chevron className="mt-4 w-full" onClick={() => navigate('/letterbox')}>
+        <PrimaryButton className="mt-4" onClick={() => navigate('/letterbox')}>
           Open my letterbox
-        </Button>
+        </PrimaryButton>
       </Card>
     )
   }
@@ -407,39 +382,39 @@ function EnvelopeWall() {
   if (count === 0 && shelf.waitingForOthers === 0 && shelf.keeperLetters === 0) return null
 
   return (
-    <Card>
-      <h2 className="text-display text-[28px] text-ink">
+    <section className="pt-2">
+      <h2 className="text-heading mb-3">
         {count > 0 ? `${shelf.fromName} has ${count} ${count === 1 ? 'letter' : 'letters'} waiting for you.` : `Letters from ${shelf.fromName}`}
       </h2>
       {count > 0 && (
-        <div className="mt-4 space-y-3">
+        <div className="space-y-4">
           {shelf.envelopes.map((e) => (
             <EnvelopeCard key={e.id} envelope={e} />
           ))}
         </div>
       )}
       {shelf.waitingForOthers > 0 && (
-        <p className="mt-4 text-[15px] text-muted">
+        <p className="text-meta mt-4 text-[15px]">
           {shelf.fromName} has {shelf.waitingForOthers} {shelf.waitingForOthers === 1 ? 'letter' : 'letters'} waiting for others.
         </p>
       )}
       {shelf.keeperLetters > 0 && (
-        <div className="mt-5 rounded-2xl bg-field p-5">
-          <p className="text-base font-bold text-ink">
+        <Card tone="sage" className="mt-5">
+          <p className="text-card-title">
             {shelf.fromName} asked you to keep {shelf.keeperLetters} {shelf.keeperLetters === 1 ? 'letter' : 'letters'} until the time comes.
           </p>
           {confirming ? (
             <div className="mt-3">
-              <p className="text-[15px] leading-normal text-ink">
+              <p className="text-body">
                 This opens every letter {shelf.fromName} left for when she’s gone, for everyone she chose. It can’t be undone.
               </p>
               <div className="mt-3 flex gap-3">
-                <Button variant="secondary" size="compact" className="flex-1" onClick={() => setConfirming(false)}>
+                <SecondaryButton compact onClick={() => setConfirming(false)}>
                   Not yet
-                </Button>
-                <Button
-                  size="compact"
-                  className="flex-1"
+                </SecondaryButton>
+                <PrimaryButton
+                  compact
+                  arrow={false}
                   disabled={releasing}
                   onClick={async () => {
                     setReleasing(true)
@@ -455,16 +430,16 @@ function EnvelopeWall() {
                   }}
                 >
                   Release them
-                </Button>
+                </PrimaryButton>
               </div>
             </div>
           ) : (
-            <Button variant="secondary" className="mt-3 w-full" onClick={() => setConfirming(true)}>
+            <PrimaryButton className="mt-3" onClick={() => setConfirming(true)}>
               Release {shelf.fromName}’s letters
-            </Button>
+            </PrimaryButton>
           )}
-        </div>
+        </Card>
       )}
-    </Card>
+    </section>
   )
 }

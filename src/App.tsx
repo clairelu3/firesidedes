@@ -1,5 +1,6 @@
-import { Navigate, NavLink, Outlet, Route, Routes } from 'react-router'
+import { Navigate, Outlet, Route, Routes } from 'react-router'
 import { DemoPanel } from './components/DemoPanel'
+import { AppShell } from './components/ui/AppShell'
 import Book from './pages/Book'
 import Chapters from './pages/Chapters'
 import Family from './pages/Family'
@@ -31,7 +32,7 @@ export default function App() {
         {/* Phone page the QR code opens: no nav, just the record button. */}
         <Route path="/r" element={<PhoneRecord />} />
 
-        {/* Kenza's pages, still in their original layout (not restyled yet) */}
+        {/* Kenza's pages */}
         <Route element={<LegacyLayout />}>
           <Route path="/memories" element={<Memories />} />
           <Route path="/qr" element={<QRPage />} />
@@ -50,42 +51,11 @@ export default function App() {
   )
 }
 
-const legacyLinks = [
-  { to: '/life', label: 'Life Map' },
-  { to: '/letterbox', label: 'Letterbox' },
-  { to: '/memories', label: 'Memories' },
-  { to: '/chapters', label: 'Review' },
-  { to: '/book', label: 'Read' },
-  { to: '/qr', label: 'QR' },
-]
-
-// Kenza's original Layout, kept as-is for her pages; links point at the new routes.
+// Kenza's pages (Memories, QR) inside the shared shell; the menu links to everything else.
 function LegacyLayout() {
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 text-lg">
-      <nav className="border-b border-stone-200 bg-white">
-        <div className="mx-auto flex max-w-3xl flex-wrap gap-2 px-4 py-3">
-          {legacyLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end
-              className={({ isActive }) =>
-                `rounded-lg px-4 py-3 text-lg font-medium ${
-                  isActive
-                    ? 'bg-stone-800 text-white'
-                    : 'text-stone-700 hover:bg-stone-100'
-                }`
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
-        </div>
-      </nav>
-      <main className="mx-auto max-w-3xl px-4 py-8">
-        <Outlet />
-      </main>
-    </div>
+    <AppShell>
+      <Outlet />
+    </AppShell>
   )
 }

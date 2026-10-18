@@ -1,21 +1,27 @@
-// /letterbox — the storyteller's home: write a letter, tell something she's never told anyone,
-// hear replies, and manage "My letters". Only she can see or change these (checked in api.ts).
-import { ChevronRight, Mail, PenLine, Trash2 } from 'lucide-react'
+// /letterbox — the storyteller's home: record a letter, tell something she's never told anyone,
+// hear replies, and manage her letters. Only she can see or change these (checked in api.ts).
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { decideRelease, deleteLetter, finishLetter, getReleasePresets, getViewer, listMyLetters, releaseLetterNow, type Viewer } from '../api'
+import { decideRelease, deleteLetter, finishLetter, getLifeMap, getReleasePresets, getViewer, listMyLetters, releaseLetterNow, type Viewer } from '../api'
 import { ReleasePicker, releaseChoiceError } from '../components/ReleasePicker'
-import { SequencePlayer } from '../components/SequencePlayer'
-import { AppShell } from '../components/ui/AppShell'
+import { AppShell, TAGLINE } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
-import { Button } from '../components/ui/Button'
+import { Avatar } from '../components/ui/Avatar'
+import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/Button'
+import type { MenuItem } from '../components/ui/CardMenu'
 import { Card } from '../components/ui/Card'
+import { Notice } from '../components/ui/Notice'
 import { PageHeader } from '../components/ui/PageHeader'
-import { firstName, formatMemoDate, greeting } from '../lib/format'
+import { RecordButton } from '../components/ui/RecordButton'
+import { SectionHeader } from '../components/ui/SectionHeader'
+import { formatMemoDate } from '../lib/format'
+import { thumbFor } from '../lib/illustrations'
 import { openedSummary, releaseSummary } from '../lib/letterText'
-import type { FamilyMember, Letter, LetterReply, ReleaseChoice, ReleasePreset } from '../types'
+import type { FamilyMember, Letter, LetterReply, LifeStage, ReleaseChoice, ReleasePreset } from '../types'
 
 type Data = { letters: Letter[]; replies: LetterReply[]; members: FamilyMember[] }
+
+const RECENT = 3
 
 const GROUPS: { key: string; title: string; test: (l: Letter) => boolean }[] = [
   { key: 'undecided', title: 'Not sent yet', test: (l) => !l.decided },
@@ -28,16 +34,19 @@ export default function Letterbox() {
   const navigate = useNavigate()
   const [viewer, setViewer] = useState<Viewer | null>(null)
   const [data, setData] = useState<Data | null>(null)
+  const [stages, setStages] = useState<LifeStage[]>([])
   const [presets, setPresets] = useState<ReleasePreset[]>([])
+  const [showAll, setShowAll] = useState(false)
   const [error, setError] = useState(false)
 
   async function load() {
     const v = await getViewer()
     setViewer(v)
     if (!v.isStoryteller) return
-    const [d, p] = await Promise.all([listMyLetters(), getReleasePresets()])
+    const [d, p, map] = await Promise.all([listMyLetters(), getReleasePresets(), getLifeMap()])
     setData(d)
     setPresets(p)
+    setStages(map?.stages ?? [])
   }
 
   useEffect(() => {
@@ -49,55 +58,39 @@ export default function Letterbox() {
 
   if (viewer && !viewer.isStoryteller) {
     return (
-      <AppShell>
+      <AppShell subtitle={TAGLINE}>
         <PageHeader title={`${viewer.storytellerName}’s letterbox`} subtitle={`Only ${viewer.storytellerName} can open her letterbox. Letters she shares are in the family book.`} />
-        <Button chevron className="w-full" onClick={() => navigate('/book')}>
-          Open the family book
-        </Button>
+        <PrimaryButton onClick={() => navigate('/book')}>Open the family book</PrimaryButton>
       </AppShell>
     )
   }
 
-  const name = viewer?.storytellerName ?? ''
   const titleOf = (letterId: string) => data?.letters.find((l) => l.id === letterId)?.title ?? 'a letter'
+  const letters = data?.letters ?? []
 
   return (
-    <AppShell>
-      <PageHeader
-        eyebrow={name ? `${greeting()}, ${firstName(name)}` : greeting()}
-        title="Who would you like to write to?"
-        subtitle="Every recording is a letter. You decide who hears it, and when."
-      />
+    <AppShell hero="hero-grandma" subtitle={TAGLINE}>
+      <PageHeader title="What do you remember?" subtitle="A place, a person, a taste, a moment. Your voice keeps it alive." />
 
-      <div className="space-y-4">
-        <Card>
-          <h2 className="text-display text-[28px] text-ink">Write a letter</h2>
-          <p className="mt-1 text-base leading-normal text-muted">Share a memory with your family.</p>
-          <Button className="mt-4 w-full" onClick={() => navigate('/record')} icon={<PenLine size={22} aria-hidden="true" />}>
-            Write a letter
-          </Button>
-        </Card>
-        <Card>
-          <h2 className="text-display text-[28px] text-ink">Something you’ve never told anyone</h2>
-          <p className="mt-1 text-base leading-normal text-muted">It starts sealed. No one can hear it until you decide.</p>
-          <Button variant="secondary" className="mt-4 w-full" onClick={() => navigate('/record?secret=1')} icon={<Mail size={22} aria-hidden="true" />}>
-            Start a sealed letter
-          </Button>
-        </Card>
+      <RecordButton onClick={() => navigate('/record?start=1')} />
+      <div className="mt-1 text-center">
+        <TextButton tone="muted" onClick={() => navigate('/record?secret=1')}>
+          Something you’ve never told anyone
+        </TextButton>
       </div>
 
       {error && (
-        <p className="mt-6 rounded-2xl bg-ember-tint px-4 py-3 text-base text-ember-dark" role="alert">
+        <Notice tone="error" className="mt-6">
           We couldn’t load your letters. Check your connection and refresh.
-        </p>
+        </Notice>
       )}
 
       {data && data.replies.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-display text-[26px] text-ink">Replies from your family</h2>
-          <div className="mt-4 space-y-3">
+          <SectionHeader title="Replies from your family" />
+          <div className="space-y-4">
             {data.replies.map((r) => (
-              <AudioCard key={r.id} title={`${r.memberName} replied to “${titleOf(r.letterId)}”`} audioUrl={r.audioUrl} variant="paper" />
+              <AudioCard key={r.id} title={`From ${r.memberName}`} meta={`About “${titleOf(r.letterId)}”`} audioUrl={r.audioUrl} thumb={<Avatar name={r.memberName} size={96} />} />
             ))}
           </div>
         </section>
@@ -105,34 +98,38 @@ export default function Letterbox() {
 
       {data && (
         <section className="mt-8">
-          <h2 className="text-display text-[26px] text-ink">My letters</h2>
-          <p className="mt-1 text-sm font-medium text-muted">Only you can see these. {data.letters.length} {data.letters.length === 1 ? 'letter' : 'letters'}</p>
-          {data.letters.length === 0 && (
-            <Card className="mt-4">
-              <p className="text-center text-base text-muted">Your letters will show up here.</p>
+          <SectionHeader
+            title={showAll ? 'My letters' : 'Recent'}
+            action={letters.length > RECENT || showAll ? { label: showAll ? 'Show less' : 'See all', onClick: () => setShowAll((s) => !s) } : undefined}
+          />
+          {letters.length === 0 && (
+            <Card className="text-center">
+              <p className="text-body text-muted">Your letters will show up here. Only you can see them.</p>
             </Card>
           )}
-          {GROUPS.map((g) => {
-            const letters = data.letters.filter(g.test)
-            if (!letters.length) return null
-            return (
-              <div key={g.key} className="mt-6">
-                <p className="text-eyebrow">{g.title}</p>
-                <ul className="mt-3 space-y-3">
-                  {letters.map((l) => (
-                    <LetterItem
-                      key={l.id}
-                      letter={l}
-                      members={data.members}
-                      presets={presets}
-                      replies={data.replies.filter((r) => r.letterId === l.id)}
-                      onChanged={() => load().catch((err) => console.error(err))}
-                    />
-                  ))}
-                </ul>
-              </div>
-            )
-          })}
+          {showAll ? (
+            GROUPS.map((g) => {
+              const inGroup = letters.filter(g.test)
+              if (!inGroup.length) return null
+              return (
+                <div key={g.key} className="mt-5 first:mt-0">
+                  <p className="text-eyebrow mb-3">{g.title}</p>
+                  <div className="space-y-4">
+                    {inGroup.map((l) => (
+                      <LetterItem key={l.id} letter={l} stages={stages} members={data.members} presets={presets} onChanged={() => load().catch((err) => console.error(err))} />
+                    ))}
+                  </div>
+                </div>
+              )
+            })
+          ) : (
+            <div className="space-y-4">
+              {letters.slice(0, RECENT).map((l) => (
+                <LetterItem key={l.id} letter={l} stages={stages} members={data.members} presets={presets} onChanged={() => load().catch((err) => console.error(err))} />
+              ))}
+            </div>
+          )}
+          {letters.length > 0 && <p className="text-meta mt-4 text-center">Only you can see these letters.</p>}
         </section>
       )}
     </AppShell>
@@ -141,21 +138,19 @@ export default function Letterbox() {
 
 function LetterItem({
   letter,
+  stages,
   members,
   presets,
-  replies,
   onChanged,
 }: {
   letter: Letter
+  stages: LifeStage[]
   members: FamilyMember[]
   presets: ReleasePreset[]
-  replies: LetterReply[]
   onChanged: () => void
 }) {
   const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [panel, setPanel] = useState<'none' | 'edit' | 'delete'>('none')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [choice, setChoice] = useState<ReleaseChoice>({
@@ -167,15 +162,13 @@ function LetterItem({
 
   const opened = Object.keys(letter.openedAt).length > 0
   const others = members.filter((m) => m.role !== 'storyteller')
-  const openedLine = openedSummary(letter, members)
 
   async function act(action: () => Promise<unknown>) {
     setBusy(true)
     setError(null)
     try {
       await action()
-      setEditing(false)
-      setConfirmDelete(false)
+      setPanel('none')
       onChanged()
     } catch (err) {
       console.error(err)
@@ -185,45 +178,48 @@ function LetterItem({
     }
   }
 
+  const menu: MenuItem[] = [{ label: 'Open this letter', onSelect: () => navigate(`/letter/${letter.id}`) }]
+  if (!opened) {
+    menu.push({ label: letter.decided ? 'Change who and when' : 'Choose when they hear it', onSelect: () => setPanel('edit') })
+    if (letter.releaseMode !== 'now') menu.push({ label: 'Release now', onSelect: () => act(() => releaseLetterNow(letter.id)) })
+    if (letter.status === 'in_progress' && letter.releaseMode !== 'now') {
+      menu.push({ label: 'Add to this letter', onSelect: () => navigate(`/record?add=${letter.id}`) })
+      menu.push({ label: 'This letter is finished', onSelect: () => act(() => finishLetter(letter.id)) })
+    }
+    menu.push({ label: 'Delete', danger: true, onSelect: () => setPanel('delete') })
+  }
+
+  const note = [
+    letter.status === 'in_progress' ? 'In progress' : null,
+    releaseSummary(letter, members),
+    letter.pieces.length > 1 ? `${letter.pieces.length} parts` : null,
+    letter.psPieces.length ? 'with a P.S.' : null,
+    openedSummary(letter, members),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
-    <li className="overflow-hidden rounded-3xl bg-paper shadow-card">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 p-4 text-left">
-        <span className="min-w-0 flex-1">
-          <span className="block text-[17px] font-bold text-ink">
-            {letter.title}
-            {letter.status === 'in_progress' && <span className="ml-2 rounded-md bg-draft px-1.5 py-0.5 align-middle text-xs font-semibold text-draft-ink">In progress</span>}
-          </span>
-          <span className="block text-sm text-muted">{releaseSummary(letter, members)}</span>
-          <span className="block text-sm text-muted">
-            {formatMemoDate(letter.createdAt)}
-            {letter.pieces.length > 1 && ` · ${letter.pieces.length} parts`}
-            {letter.psPieces.length > 0 && ' · with a P.S.'}
-            {openedLine && ` · ${openedLine}`}
-          </span>
-        </span>
-        <ChevronRight size={20} className={`shrink-0 text-muted ${open ? 'rotate-90' : ''}`} aria-hidden="true" />
-      </button>
-
-      {open && (
-        <div className="space-y-3 border-t border-line p-4">
-          <SequencePlayer title="Listen again" urls={[...letter.psPieces, ...letter.pieces].map((p) => p.audioUrl)} variant="field" />
-
-          {replies.map((r) => (
-            <AudioCard key={r.id} title={`Reply from ${r.memberName}`} audioUrl={r.audioUrl} variant="field" />
-          ))}
-
-          {opened ? (
-            <p className="text-[15px] text-muted">Someone has opened this letter, so it can’t be changed.</p>
-          ) : editing ? (
-            <div className="space-y-3">
+    <AudioCard
+      title={letter.title}
+      meta={formatMemoDate(letter.createdAt)}
+      note={note}
+      urls={[...letter.psPieces, ...letter.pieces].map((p) => p.audioUrl)}
+      thumb={thumbFor(letter.stageId, stages)}
+      menu={menu}
+    >
+      {(panel !== 'none' || error) && (
+        <div className="space-y-3">
+          {panel === 'edit' && (
+            <>
               <ReleasePicker value={choice} onChange={setChoice} presets={presets} members={others} storytellerName="you" />
               <div className="flex gap-3">
-                <Button variant="secondary" size="compact" className="flex-1" onClick={() => setEditing(false)}>
+                <SecondaryButton compact onClick={() => setPanel('none')}>
                   Cancel
-                </Button>
-                <Button
-                  size="compact"
-                  className="flex-1"
+                </SecondaryButton>
+                <PrimaryButton
+                  compact
+                  arrow={false}
                   disabled={busy}
                   onClick={() => {
                     const problem = releaseChoiceError(choice)
@@ -232,56 +228,26 @@ function LetterItem({
                   }}
                 >
                   Save
-                </Button>
+                </PrimaryButton>
               </div>
-            </div>
-          ) : (
-            <div className="grid gap-2">
-              <Button variant="field" size="compact" onClick={() => setEditing(true)}>
-                {letter.decided ? 'Change the date or recipients' : 'Choose when they hear it'}
-              </Button>
-              {letter.releaseMode !== 'now' && (
-                <Button variant="field" size="compact" disabled={busy} onClick={() => act(() => releaseLetterNow(letter.id))}>
-                  Release now
-                </Button>
-              )}
-              {letter.status === 'in_progress' && letter.releaseMode !== 'now' && (
-                <>
-                  <Button variant="field" size="compact" onClick={() => navigate(`/record?add=${letter.id}`)}>
-                    Add to this letter
-                  </Button>
-                  <Button variant="field" size="compact" disabled={busy} onClick={() => act(() => finishLetter(letter.id))}>
-                    This letter is finished
-                  </Button>
-                </>
-              )}
-              {confirmDelete ? (
-                <div className="rounded-2xl bg-ember-tint p-4">
-                  <p className="text-base font-semibold text-ink">Delete this letter? This can’t be undone.</p>
-                  <div className="mt-3 flex gap-3">
-                    <Button variant="secondary" size="compact" className="flex-1" onClick={() => setConfirmDelete(false)}>
-                      Keep it
-                    </Button>
-                    <Button size="compact" className="flex-1" disabled={busy} onClick={() => act(() => deleteLetter(letter.id))}>
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button variant="ghost" size="compact" onClick={() => setConfirmDelete(true)} icon={<Trash2 size={18} aria-hidden="true" />}>
+            </>
+          )}
+          {panel === 'delete' && (
+            <>
+              <p className="text-body">Delete this letter? This can’t be undone.</p>
+              <div className="flex gap-3">
+                <SecondaryButton compact onClick={() => setPanel('none')}>
+                  Keep it
+                </SecondaryButton>
+                <PrimaryButton compact arrow={false} disabled={busy} danger onClick={() => act(() => deleteLetter(letter.id))}>
                   Delete
-                </Button>
-              )}
-            </div>
+                </PrimaryButton>
+              </div>
+            </>
           )}
-
-          {error && (
-            <p className="rounded-2xl bg-ember-tint px-4 py-3 text-base text-ember-dark" role="alert">
-              {error}
-            </p>
-          )}
+          {error && <Notice tone="error">{error}</Notice>}
         </div>
       )}
-    </li>
+    </AudioCard>
   )
 }

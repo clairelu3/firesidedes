@@ -1,6 +1,6 @@
-import { Button } from './Button'
+import { PrimaryButton, SecondaryButton } from './Button'
 
-export const STICKY_ACTION_BAR_HEIGHT = 88
+export const STICKY_ACTION_BAR_HEIGHT = 72
 
 export function StickyActionBar({
   onBack,
@@ -14,13 +14,13 @@ export function StickyActionBar({
   continueDisabled?: boolean
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <Button variant="secondary" onClick={onBack} size="bar" className="w-[30%]">
+    <div className="flex items-center gap-3">
+      <SecondaryButton onClick={onBack} className="w-[32%]">
         Back
-      </Button>
-      <Button onClick={onContinue} disabled={continueDisabled} chevron size="bar" className="flex-1">
+      </SecondaryButton>
+      <PrimaryButton onClick={onContinue} disabled={continueDisabled} className="flex-1">
         {continueLabel}
-      </Button>
+      </PrimaryButton>
     </div>
   )
 }
