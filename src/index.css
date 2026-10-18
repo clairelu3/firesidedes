@@ -28,6 +28,8 @@
   --animate-halo: halo 1.8s ease-in-out infinite;
   --animate-wave: wave 0.9s ease-in-out infinite;
   --animate-drawer: drawer 0.22s ease-out;
+  --animate-stamp-press: stamp-press 600ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  --animate-rise: rise 520ms ease-out both;
 
   @keyframes halo {
     0%,
@@ -47,6 +49,45 @@
     }
     50% {
       transform: scaleY(0.45);
+    }
+  }
+  /* The logo lands like a chop pressed onto paper: big and faint, a small squash, ink settles. */
+  @keyframes stamp-press {
+    0% {
+      opacity: 0;
+      transform: scale(1.15);
+      filter: blur(3px);
+    }
+    55% {
+      opacity: 1;
+      transform: scale(0.97, 1.03);
+      filter: blur(0.6px);
+    }
+    75% {
+      transform: scale(1.015, 0.99);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+      filter: blur(0);
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
   @keyframes drawer {
@@ -120,6 +161,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Welcome screen: a plain fade instead of the press and rise. */
+  .animate-stamp-press,
+  .animate-rise {
+    animation: fade 400ms ease-out both !important;
+  }
   *,
   *::before,
   *::after {

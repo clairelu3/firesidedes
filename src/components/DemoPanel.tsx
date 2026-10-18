@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { demoKeeperRelease, demoReset, demoSetViewer, getViewer, IS_DEMO, type Viewer } from '../api'
 import { getFakeToday, setFakeToday, todayString } from '../lib/today'
+import { resetWelcome } from '../lib/welcome'
 import { SecondaryButton } from './ui/Button'
 
 const OPEN_KEY = 'postscript-demo-panel'
@@ -149,6 +150,7 @@ export function DemoPanel() {
             compact
             onClick={() => {
               setFakeToday(null)
+              resetWelcome() // so the next recording starts from the welcome screen
               demoReset().then(reload)
             }}
           >

@@ -15,9 +15,21 @@ type Props = AppHeaderProps & {
   spine?: boolean // the Family Book's dark-green spine down the left edge
   floating?: ReactNode
   floatingHeight?: number
+  bare?: boolean // no header; content centered on the page (welcome screen)
 }
 
-export function AppShell({ children, hero, heroSize = 'tall', spine = false, floating, floatingHeight = 0, ...header }: Props) {
+export function AppShell({ children, hero, heroSize = 'tall', spine = false, floating, floatingHeight = 0, bare = false, ...header }: Props) {
+  if (bare) {
+    return (
+      <div className="min-h-dvh">
+        <div className="relative mx-auto flex min-h-dvh max-w-[430px] flex-col overflow-x-clip">
+          <CornerLeaves side="left" className="-top-4 -left-10 h-36 w-44" />
+          <CornerLeaves side="right" className="-top-6 -right-12 h-44 w-52" />
+          <main className="relative flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">{children}</main>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="min-h-dvh">
       <div className="relative mx-auto min-h-dvh max-w-[430px] overflow-x-clip">

@@ -1,8 +1,15 @@
 // A small red carved seal (印章): characters in reserved white on vermilion, slightly rotated,
 // with worn edges. Two characters stack vertically; four sit in a 2×2 grid read right to left.
 import { useSvgId } from './Illustration'
+import { LOGO_TEXT, LogoStamp } from './LogoStamp'
 
 export function ChopSeal({ text, size = 34, className = '' }: { text: string; size?: number; className?: string }) {
+  // 家書 is the Postscript logo: always draw it with the one shared mark.
+  if (text === LOGO_TEXT) return <LogoStamp size={Math.round(size * 1.7)} className={className} />
+  return <CarvedSeal text={text} size={size} className={className} />
+}
+
+function CarvedSeal({ text, size, className }: { text: string; size: number; className: string }) {
   const id = useSvgId('chop')
   const chars = [...text].slice(0, 4)
   const height = chars.length === 2 ? size * 1.7 : size
@@ -52,7 +59,7 @@ export function ChopSeal({ text, size = 34, className = '' }: { text: string; si
             y={height * y}
             textAnchor="middle"
             fontSize={fontSize}
-            fontFamily='"Songti TC", "Noto Serif TC", "PMingLiU", serif'
+            fontFamily="'Noto Serif TC', 'Songti TC', 'PMingLiU', serif"
             fontWeight="700"
             fill="#fbf7ef"
           >

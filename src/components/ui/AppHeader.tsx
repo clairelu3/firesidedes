@@ -5,6 +5,7 @@ import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { getMyName } from '../../api'
 import { Avatar } from './Avatar'
+import { LogoStamp } from './LogoStamp'
 import { MenuDrawer } from './MenuDrawer'
 
 export type AppHeaderProps = {
@@ -35,7 +36,10 @@ export function AppHeader({ back, menu = true, subtitle, divider = false, right 
       </div>
 
       <div className="text-center">
-        <p className="text-wordmark pt-1">Postscript</p>
+        <p className="flex items-center justify-center gap-2 pt-1">
+          <LogoStamp size="sm" />
+          <span className="text-wordmark">Postscript</span>
+        </p>
         {subtitle && <p className="mx-auto mt-2 max-w-[250px] font-serif text-[14.5px] leading-snug whitespace-pre-line text-ink/80">{subtitle}</p>}
         {divider && <span className="mx-auto mt-3 block h-px w-48 bg-ink/20" aria-hidden="true" />}
       </div>

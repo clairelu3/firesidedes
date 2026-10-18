@@ -15,6 +15,7 @@ import {
   type LetterShelf,
 } from '../api'
 import { InviteSheet } from '../components/InviteSheet'
+import { WelcomeScreen } from '../components/WelcomeScreen'
 import { AppShell } from '../components/ui/AppShell'
 import { Avatar } from '../components/ui/Avatar'
 import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/Button'
@@ -26,6 +27,7 @@ import { Notice } from '../components/ui/Notice'
 import { PageHeader } from '../components/ui/PageHeader'
 import { RoleBadge } from '../components/ui/RoleBadge'
 import { NotAnImageError } from '../lib/image'
+import { hasSeenWelcome, markWelcomeSeen } from '../lib/welcome'
 import type { Family as FamilyType, FamilyMember } from '../types'
 
 // NOTE: roles are checked in the browser only (identity = a member id in localStorage).
@@ -45,6 +47,8 @@ export default function Family() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [inviting, setInviting] = useState(false)
+  // Intake starts with the welcome (logo + Begin), once per browser.
+  const [welcomed, setWelcomed] = useState(hasSeenWelcome)
 
   async function refresh() {
     const [f, m] = await Promise.all([getFamily(code), listFamilyMembers(code)])
@@ -71,6 +75,18 @@ export default function Family() {
   useEffect(() => {
     if (me) saveMyIdentity({ code, name: me.name })
   }, [code, me])
+
+  if (!welcomed) {
+    return (
+      <WelcomeScreen
+        onBegin={() => {
+          markWelcomeSeen()
+          setWelcomed(true)
+          window.scrollTo({ top: 0 })
+        }}
+      />
+    )
+  }
 
   if (loading) {
     return (
