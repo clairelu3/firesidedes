@@ -1,10 +1,10 @@
-import { BookMarked, BookOpen, Map, Mic, Users } from 'lucide-react'
+import { BookMarked, BookOpen, Mail, Map, Users } from 'lucide-react'
 import { NavLink } from 'react-router'
 
 const tabs = [
   { to: '/family', label: 'Family', Icon: Users },
   { to: '/life', label: 'Life', Icon: Map },
-  { to: '/record', label: 'Record', Icon: Mic },
+  { to: '/letterbox', label: 'Letters', Icon: Mail },
   { to: '/chapters', label: 'Chapters', Icon: BookOpen },
   { to: '/book', label: 'Book', Icon: BookMarked },
 ]

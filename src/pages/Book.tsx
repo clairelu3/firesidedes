@@ -1,6 +1,7 @@
 import { ChevronRight, Headphones } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { getLifeMap, getMyName, listChapters, listMemos } from '../api'
+import { getLetterShelf, getLifeMap, getMyName, listChapters, listMemos, type LetterShelf } from '../api'
+import { EnvelopeCard } from '../components/EnvelopeCard'
 import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
 import { HeaderIconButton } from '../components/ui/Header'
@@ -8,21 +9,23 @@ import { LogoMark } from '../components/ui/LogoMark'
 import { Diamond, StoryPassages } from '../components/ui/story'
 import { firstName, numberToWords, startYear } from '../lib/format'
 import { useAudio } from '../lib/useAudio'
-import type { Chapter, LifeStage, Memo } from '../types'
+import type { Chapter, Envelope, LifeStage, Memo } from '../types'
 
-type Part = { number: number; stage?: LifeStage; chapters: Chapter[] }
+type Part = { number: number; stage?: LifeStage; chapters: Chapter[]; envelopes: Envelope[] }
 
-// Approved chapters grouped by life stage, in timeline order (getLifeMap sorts by start year).
-// Chapters whose stage we can't find go in a final part.
-function groupIntoParts(chapters: Chapter[], stages: LifeStage[]): Part[] {
+// Approved chapters (and sealed envelopes for this reader) grouped by life stage, in timeline
+// order (getLifeMap sorts by start year). Anything whose stage we can't find goes in a final part.
+function groupIntoParts(chapters: Chapter[], stages: LifeStage[], envelopes: Envelope[]): Part[] {
   const parts: Part[] = []
   for (const stage of stages) {
     const inStage = chapters.filter((c) => c.stageId === stage.id)
-    if (inStage.length) parts.push({ number: parts.length + 1, stage, chapters: inStage })
+    const sealed = envelopes.filter((e) => e.stageId === stage.id)
+    if (inStage.length || sealed.length) parts.push({ number: parts.length + 1, stage, chapters: inStage, envelopes: sealed })
   }
   const known = new Set(stages.map((s) => s.id))
   const rest = chapters.filter((c) => !known.has(c.stageId))
-  if (rest.length) parts.push({ number: parts.length + 1, chapters: rest })
+  const restEnvelopes = envelopes.filter((e) => !e.stageId || !known.has(e.stageId))
+  if (rest.length || restEnvelopes.length) parts.push({ number: parts.length + 1, chapters: rest, envelopes: restEnvelopes })
   return parts
 }
 
@@ -38,16 +41,19 @@ export default function Book() {
   const [memos, setMemos] = useState<Memo[]>([])
   const [name, setName] = useState(() => getMyName())
   const [currentId, setCurrentId] = useState<string | null>(null)
+  const [shelf, setShelf] = useState<LetterShelf | null>(null)
 
   useEffect(() => {
-    Promise.all([listChapters(), getLifeMap(), listMemos()])
-      .then(([chapters, map, m]) => {
-        const approved = chapters.filter((c) => c.status === 'approved')
-        const grouped = groupIntoParts(approved, map?.stages ?? [])
+    Promise.all([listChapters(), getLifeMap(), listMemos(), getLetterShelf()])
+      .then(([chapters, map, m, letterShelf]) => {
+        // Letters this reader has opened become normal pages in the book.
+        const approved = [...chapters.filter((c) => c.status === 'approved'), ...letterShelf.openedChapters]
+        const grouped = groupIntoParts(approved, map?.stages ?? [], letterShelf.envelopes)
         setParts(grouped)
+        setShelf(letterShelf)
         setMemos(m)
         if (map?.name) setName(map.name)
-        setCurrentId(grouped[0]?.chapters[0]?.id ?? null)
+        setCurrentId(grouped.flatMap((p) => p.chapters)[0]?.id ?? null)
       })
       .catch((err) => {
         console.error(err)
@@ -77,6 +83,14 @@ export default function Book() {
   const headerAudioUrl = audioFor(current)
   const { ref: headerAudioRef, playing: headerPlaying, toggle: toggleHeaderAudio } = useAudio(headerAudioUrl)
   const first = firstName(name)
+  const fromName = shelf?.fromName ?? first
+  const forToday = shelf?.envelopes.filter((e) => e.openable) ?? []
+  const waiting = shelf?.waitingForOthers ?? 0
+  const waitingLine = waiting > 0 && (
+    <p className="py-8 text-center text-base text-muted">
+      {fromName} has {waiting} {waiting === 1 ? 'letter' : 'letters'} waiting for {shelf?.isStoryteller ? 'the family' : 'others'}.
+    </p>
+  )
 
   const headerAction = headerAudioUrl ? (
     <HeaderIconButton label={headerPlaying ? 'Pause this chapter’s recording' : 'Play this chapter’s recording'} active={headerPlaying} onClick={toggleHeaderAudio}>
@@ -102,6 +116,7 @@ export default function Book() {
             Your family’s book will appear here once chapters are approved.
           </p>
         </section>
+        {waitingLine}
       </AppShell>
     )
   }
@@ -109,9 +124,16 @@ export default function Book() {
   return (
     <AppShell avatarVariant="sand" headerAction={headerAction}>
       {headerAudioUrl && <audio ref={headerAudioRef} src={headerAudioUrl} preload="metadata" />}
+      {forToday.length > 0 && (
+        <div className="mb-6 space-y-3">
+          {forToday.map((e) => (
+            <EnvelopeCard key={e.id} envelope={e} />
+          ))}
+        </div>
+      )}
       {parts.map((part, pi) => (
         <div key={part.number}>
-          <PartBanner part={part} first={pi === 0} />
+          <PartBanner part={part} first={pi === 0 && forToday.length === 0} />
           {part.chapters.map((chapter) => {
             const next = ordered[ordered.indexOf(chapter) + 1]
             const audioUrl = audioFor(chapter)
@@ -153,8 +175,19 @@ export default function Book() {
               </article>
             )
           })}
+          {part.envelopes.length > 0 && (
+            <section className="py-8">
+              <p className="text-eyebrow text-center">Sealed letters</p>
+              <div className="mt-4 space-y-3">
+                {part.envelopes.map((e) => (
+                  <EnvelopeCard key={e.id} envelope={e} />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       ))}
+      {waitingLine}
     </AppShell>
   )
 }

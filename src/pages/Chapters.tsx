@@ -59,7 +59,7 @@ export default function Chapters() {
           <LogoMark className="mx-auto h-9 w-auto text-ember" />
           <h1 className="text-display mt-5 text-[32px] text-ink">No chapters to review yet.</h1>
           <p className="mx-auto mt-3 max-w-[300px] text-[17px] leading-normal text-muted">
-            {error ? 'We couldn’t load your chapters. Check your connection and refresh.' : 'Keep recording. Fireside will write your first chapter soon.'}
+            {error ? 'We couldn’t load your chapters. Check your connection and refresh.' : 'Keep recording. Postscript will write your first chapter soon.'}
           </p>
         </section>
       </AppShell>

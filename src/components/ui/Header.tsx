@@ -8,9 +8,9 @@ export function Header({ action, avatarVariant = 'ember' }: { action?: ReactNode
   const name = getMyName()
   return (
     <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-line bg-paper px-5">
-      <Link to="/family" className="flex items-center gap-2 rounded-lg text-ink" aria-label="Fireside home">
+      <Link to="/family" className="flex items-center gap-2 rounded-lg text-ink" aria-label="Postscript home">
         <LogoMark className="h-7 w-auto text-ember" />
-        <span className="font-display text-[26px] font-semibold lowercase leading-none tracking-[-0.02em]">fireside</span>
+        <span className="font-display text-[26px] font-semibold lowercase leading-none tracking-[-0.02em]">postscript</span>
       </Link>
       <div className="flex items-center gap-2">
         {action}

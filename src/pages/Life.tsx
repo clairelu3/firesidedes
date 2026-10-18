@@ -1,7 +1,7 @@
-import { Pencil } from 'lucide-react'
+import { Pencil, Plus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { getLifeMap, getMyName, saveLifeMap } from '../api'
+import { getLifeMap, getMyName, LIFE_MAP_REPLACES_ON_SAVE, saveLifeMap } from '../api'
 import { AppShell } from '../components/ui/AppShell'
 import { Avatar } from '../components/ui/Avatar'
 import { StepCard } from '../components/ui/Card'
@@ -9,7 +9,8 @@ import { DashedAddButton } from '../components/ui/DashedAddButton'
 import { Field } from '../components/ui/Field'
 import { PageHeader } from '../components/ui/PageHeader'
 import { STICKY_ACTION_BAR_HEIGHT, StickyActionBar } from '../components/ui/StickyActionBar'
-import type { LifeStage, Person } from '../types'
+import { formatDay } from '../lib/today'
+import type { LifeStage, Person, SpecialDate } from '../types'
 
 // The form edits From/To separately; they're joined into LifeStage.years ("1958–1975") on save.
 type StageDraft = { id: string; label: string; from: string; to: string; place: string; livedWith: string }
@@ -20,6 +21,11 @@ const newPerson = (): Person => ({ id: crypto.randomUUID(), name: '', nickname: 
 function stageRange(s: StageDraft) {
   if (s.from) return `${s.from}–${s.to || 'Present'}`
   return s.to ? `Until ${s.to}` : ''
+}
+
+function fromLifeStage(s: LifeStage): StageDraft {
+  const [from = '', to = ''] = s.years.match(/\d{4}/g) ?? []
+  return { id: s.id, label: s.label, from, to, place: s.place, livedWith: s.livedWith }
 }
 
 function toLifeStage(s: StageDraft): LifeStage {
@@ -44,11 +50,22 @@ export default function Life() {
 
   // Only prefill name/birth year: saveLifeMap inserts rows, so reloading saved
   // stages/people here would duplicate them on the next save (see TODO in api.ts).
+  // Demo mode replaces the whole life map on save, so everything can be prefilled there.
   useEffect(() => {
     getLifeMap()
       .then((map) => {
         if (map?.name) setName((n) => n || map.name)
         if (map?.birthYear) setBirthYear((y) => y || String(map.birthYear))
+        if (LIFE_MAP_REPLACES_ON_SAVE && map) {
+          if (map.stages.length) {
+            setStages(map.stages.map(fromLifeStage))
+            setEditingStage(null)
+          }
+          if (map.people.length) {
+            setPeople(map.people)
+            setEditingPerson(null)
+          }
+        }
       })
       .catch((err) => console.error(err))
   }, [])
@@ -65,6 +82,10 @@ export default function Life() {
     setPeople((prev) => prev.map((p) => (p.id === id ? { ...p, ...changes } : p)))
   }
 
+  function updateSpecialDate(person: Person, i: number, changes: Partial<SpecialDate>) {
+    updatePerson(person.id, { specialDates: (person.specialDates ?? []).map((d, j) => (j === i ? { ...d, ...changes } : d)) })
+  }
+
   const canContinue = step !== 1 || (name.trim() !== '' && /^\d{4}$/.test(birthYear))
 
   async function handleContinue() {
@@ -76,7 +97,7 @@ export default function Life() {
     setError(false)
     try {
       await saveLifeMap({ name: name.trim(), birthYear: Number(birthYear), stages: stages.map(toLifeStage), people })
-      navigate('/record')
+      navigate('/letterbox')
     } catch (err) {
       console.error(err)
       setError(true)
@@ -100,7 +121,7 @@ export default function Life() {
         eyebrow="Your life map"
         counter={`Step ${step} of 3`}
         title="A little context goes a long way."
-        subtitle="These details help Fireside place your stories in the right chapter. You can always change them later."
+        subtitle="These details help Postscript place your stories in the right chapter. You can always change them later."
         progress={step / 3}
       />
 
@@ -192,7 +213,7 @@ export default function Life() {
       )}
 
       {step === 3 && (
-        <StepCard step={3} title="Your people" subtitle="Add the names that come up most often in your stories.">
+        <StepCard step={3} title="Your people" subtitle="Add the names that come up most often in your stories. Birthdays let you seal a letter for a special day.">
           <ul className="space-y-3">
             {people.map((person) =>
               person.id === editingPerson ? (
@@ -200,6 +221,31 @@ export default function Life() {
                   <Field label="Name" tone="paper" placeholder="Mei-Ling" value={person.name} onChange={(e) => updatePerson(person.id, { name: e.target.value })} />
                   <Field label="Nickname" tone="paper" placeholder="Optional" value={person.nickname ?? ''} onChange={(e) => updatePerson(person.id, { nickname: e.target.value })} />
                   <Field label="Relationship" tone="paper" placeholder="Cousin" value={person.relation} onChange={(e) => updatePerson(person.id, { relation: e.target.value })} />
+                  <Field label="Birthday" tone="paper" type="date" value={person.birthday ?? ''} onChange={(e) => updatePerson(person.id, { birthday: e.target.value || undefined })} />
+                  {(person.specialDates ?? []).map((d, i) => (
+                    <div key={i} className="space-y-3 rounded-2xl border border-line p-3">
+                      <div className="flex items-end gap-2">
+                        <Field label="Special date" tone="paper" className="min-w-0 flex-1" placeholder="Wedding day" value={d.label} onChange={(e) => updateSpecialDate(person, i, { label: e.target.value })} />
+                        <button
+                          type="button"
+                          onClick={() => updatePerson(person.id, { specialDates: (person.specialDates ?? []).filter((_, j) => j !== i) })}
+                          aria-label={`Remove ${d.label || 'special date'}`}
+                          className="flex size-12 shrink-0 items-center justify-center rounded-full text-muted hover:bg-line hover:text-ink"
+                        >
+                          <X size={20} aria-hidden="true" />
+                        </button>
+                      </div>
+                      <Field label="Date" tone="paper" type="date" value={d.date} onChange={(e) => updateSpecialDate(person, i, { date: e.target.value })} />
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => updatePerson(person.id, { specialDates: [...(person.specialDates ?? []), { label: '', date: '' }] })}
+                    className="flex h-12 items-center gap-2 rounded-xl px-2 text-base font-semibold text-ember hover:bg-ember-tint/60"
+                  >
+                    <Plus size={18} strokeWidth={2.5} aria-hidden="true" />
+                    Add a special date
+                  </button>
                   <div className="flex justify-end">
                     <button type="button" onClick={() => setEditingPerson(null)} className="h-12 rounded-xl px-4 text-base font-semibold text-ember hover:bg-ember-tint/60">
                       Done
@@ -212,7 +258,8 @@ export default function Life() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-lg font-bold text-ink">{person.name || 'New person'}</p>
                     <p className="truncate text-sm text-muted">
-                      {[person.nickname && `“${person.nickname}”`, person.relation].filter(Boolean).join(' · ') || 'Tap the pencil to add details'}
+                      {[person.nickname && `“${person.nickname}”`, person.relation, person.birthday && `Born ${formatDay(person.birthday, 'short')}`].filter(Boolean).join(' · ') ||
+                        'Tap the pencil to add details'}
                     </p>
                   </div>
                   <button

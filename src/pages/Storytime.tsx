@@ -64,7 +64,7 @@ export default function Storytime() {
   }, [memoId])
 
   const back = (
-    <Link to="/record" className="-ml-2 inline-flex h-12 items-center gap-1 rounded-xl px-2 text-base font-semibold text-ember hover:bg-ember-tint/50">
+    <Link to="/letterbox" className="-ml-2 inline-flex h-12 items-center gap-1 rounded-xl px-2 text-base font-semibold text-ember hover:bg-ember-tint/50">
       <ChevronLeft size={20} strokeWidth={2.5} aria-hidden="true" />
       Memories
     </Link>

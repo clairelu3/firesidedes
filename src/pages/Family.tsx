@@ -4,13 +4,17 @@ import { useNavigate, useParams } from 'react-router'
 import {
   getCurrentMember,
   getFamily,
+  getLetterShelf,
   getMyIdentity,
   joinFamily,
   listFamilyMembers,
+  releaseAsKeeper,
   saveCurrentMember,
   saveMyIdentity,
   uploadFamilyPhoto,
+  type LetterShelf,
 } from '../api'
+import { EnvelopeCard } from '../components/EnvelopeCard'
 import { InviteSheet } from '../components/InviteSheet'
 import { AppShell } from '../components/ui/AppShell'
 import { Avatar } from '../components/ui/Avatar'
@@ -120,6 +124,8 @@ export default function Family() {
           onUploaded={(photoUrl) => setFamily((f) => (f ? { ...f, photoUrl } : f))}
         />
 
+        <EnvelopeWall />
+
         <Card>
           <div className="flex items-baseline justify-between gap-4">
             <h2 className="text-display text-[28px] text-ink">Family roles</h2>
@@ -211,7 +217,7 @@ function JoinScreen({ family, onJoin }: { family: FamilyType | null; onJoin: (na
       <PageHeader
         counter={family ? undefined : '1 of 2'}
         title={family ? `Join ${family.name}` : TITLE}
-        subtitle={family ? 'Your family is keeping its stories on Fireside. Tell us your name to join them.' : SUBTITLE}
+        subtitle={family ? 'Your family is keeping its stories on Postscript. Tell us your name to join them.' : SUBTITLE}
       />
       <Card>
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -351,7 +357,7 @@ function CoverPlaceholder({
         {isOrganizer ? 'Add a family photo' : familyName}
       </span>
       <span className="mt-2 max-w-[260px] text-base leading-normal text-muted">
-        {isOrganizer ? 'A photo everyone will see when they open Fireside.' : 'Your organizer hasn’t added a photo yet.'}
+        {isOrganizer ? 'A photo everyone will see when they open Postscript.' : 'Your organizer hasn’t added a photo yet.'}
       </span>
       <span className="mt-5 text-[11px] font-semibold tracking-[0.18em] text-muted">OUR STORIES · SINCE {since}</span>
     </>
@@ -363,5 +369,102 @@ function CoverPlaceholder({
       {content}
       {children}
     </label>
+  )
+}
+
+// "Ama has N letters waiting for you": envelopes only, never titles or topics.
+function EnvelopeWall() {
+  const navigate = useNavigate()
+  const [shelf, setShelf] = useState<LetterShelf | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const [releasing, setReleasing] = useState(false)
+
+  const load = () => getLetterShelf().then(setShelf)
+
+  useEffect(() => {
+    load().catch((err) => console.error(err))
+  }, [])
+
+  if (!shelf) return null
+
+  if (shelf.isStoryteller) {
+    return (
+      <Card>
+        <h2 className="text-display text-[28px] text-ink">Your letters</h2>
+        <p className="mt-2 text-[15px] leading-normal text-muted">
+          {shelf.waitingForOthers > 0
+            ? `You have ${shelf.waitingForOthers} sealed ${shelf.waitingForOthers === 1 ? 'letter' : 'letters'} waiting for your family.`
+            : 'Write a letter to your family, or keep one sealed for a special day.'}
+        </p>
+        <Button chevron className="mt-4 w-full" onClick={() => navigate('/letterbox')}>
+          Open my letterbox
+        </Button>
+      </Card>
+    )
+  }
+
+  const count = shelf.envelopes.length
+  if (count === 0 && shelf.waitingForOthers === 0 && shelf.keeperLetters === 0) return null
+
+  return (
+    <Card>
+      <h2 className="text-display text-[28px] text-ink">
+        {count > 0 ? `${shelf.fromName} has ${count} ${count === 1 ? 'letter' : 'letters'} waiting for you.` : `Letters from ${shelf.fromName}`}
+      </h2>
+      {count > 0 && (
+        <div className="mt-4 space-y-3">
+          {shelf.envelopes.map((e) => (
+            <EnvelopeCard key={e.id} envelope={e} />
+          ))}
+        </div>
+      )}
+      {shelf.waitingForOthers > 0 && (
+        <p className="mt-4 text-[15px] text-muted">
+          {shelf.fromName} has {shelf.waitingForOthers} {shelf.waitingForOthers === 1 ? 'letter' : 'letters'} waiting for others.
+        </p>
+      )}
+      {shelf.keeperLetters > 0 && (
+        <div className="mt-5 rounded-2xl bg-field p-5">
+          <p className="text-base font-bold text-ink">
+            {shelf.fromName} asked you to keep {shelf.keeperLetters} {shelf.keeperLetters === 1 ? 'letter' : 'letters'} until the time comes.
+          </p>
+          {confirming ? (
+            <div className="mt-3">
+              <p className="text-[15px] leading-normal text-ink">
+                This opens every letter {shelf.fromName} left for when she’s gone, for everyone she chose. It can’t be undone.
+              </p>
+              <div className="mt-3 flex gap-3">
+                <Button variant="secondary" size="compact" className="flex-1" onClick={() => setConfirming(false)}>
+                  Not yet
+                </Button>
+                <Button
+                  size="compact"
+                  className="flex-1"
+                  disabled={releasing}
+                  onClick={async () => {
+                    setReleasing(true)
+                    try {
+                      await releaseAsKeeper()
+                      await load()
+                      setConfirming(false)
+                    } catch (err) {
+                      console.error(err)
+                    } finally {
+                      setReleasing(false)
+                    }
+                  }}
+                >
+                  Release them
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="secondary" className="mt-3 w-full" onClick={() => setConfirming(true)}>
+              Release {shelf.fromName}’s letters
+            </Button>
+          )}
+        </div>
+      )}
+    </Card>
   )
 }
