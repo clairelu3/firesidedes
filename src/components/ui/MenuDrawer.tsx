@@ -14,7 +14,7 @@ const LINKS = [
   { to: '/chapters', label: 'Review', hint: 'Approve chapters for the book', Icon: BookMarked },
 ]
 
-export function MenuDrawer({ onClose }: { onClose: () => void }) {
+export function MenuDrawer({ onClose, fullScreen = false }: { onClose: () => void; fullScreen?: boolean }) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const name = getMyName()
 
@@ -30,12 +30,21 @@ export function MenuDrawer({ onClose }: { onClose: () => void }) {
       <nav
         aria-label="Main"
         onClick={(e) => e.stopPropagation()}
-        className="bg-paper motion-safe:animate-drawer absolute inset-y-0 left-0 flex w-[min(320px,84vw)] flex-col px-6 pt-6 pb-[calc(24px+env(safe-area-inset-bottom))] shadow-float"
+        className={`bg-paper absolute inset-y-0 left-0 flex flex-col overflow-y-auto px-6 pt-6 pb-[calc(24px+env(safe-area-inset-bottom))] ${
+          fullScreen ? 'right-0 mx-auto max-w-[430px]' : 'motion-safe:animate-drawer w-[min(320px,84vw)] shadow-float'
+        }`}
       >
         <div className="flex items-center justify-between">
           <p className="text-wordmark text-[34px]">Postscript</p>
-          <button ref={closeRef} type="button" onClick={onClose} aria-label="Close menu" className="flex size-11 items-center justify-center rounded-full text-ink hover:bg-ink/5">
-            <X size={22} strokeWidth={1.5} aria-hidden="true" />
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            aria-label={fullScreen ? undefined : 'Close menu'}
+            className={fullScreen ? 'inline-flex min-h-12 items-center gap-1.5 rounded-full border border-ink/15 bg-card px-4 font-serif text-[18px] text-ink' : 'flex size-11 items-center justify-center rounded-full text-ink hover:bg-ink/5'}
+          >
+            <X size={fullScreen ? 18 : 22} strokeWidth={1.5} aria-hidden="true" />
+            {fullScreen && 'Close'}
           </button>
         </div>
         {name && (

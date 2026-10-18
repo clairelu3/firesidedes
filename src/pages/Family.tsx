@@ -5,6 +5,7 @@ import {
   getCurrentMember,
   getFamily,
   getLetterShelf,
+  getWaitingCounts,
   getMyIdentity,
   joinFamily,
   listFamilyMembers,
@@ -14,6 +15,7 @@ import {
   uploadFamilyPhoto,
   type LetterShelf,
 } from '../api'
+import { EnvelopeSheet, MemberSheet } from '../components/FamilySheets'
 import { InviteSheet } from '../components/InviteSheet'
 import { WelcomeScreen } from '../components/WelcomeScreen'
 import { AppShell } from '../components/ui/AppShell'
@@ -27,8 +29,9 @@ import { Notice } from '../components/ui/Notice'
 import { PageHeader } from '../components/ui/PageHeader'
 import { RoleBadge } from '../components/ui/RoleBadge'
 import { NotAnImageError } from '../lib/image'
+import { useIsStoryteller } from '../lib/useViewer'
 import { hasSeenWelcome, markWelcomeSeen } from '../lib/welcome'
-import type { Family as FamilyType, FamilyMember } from '../types'
+import type { Envelope, Family as FamilyType, FamilyMember } from '../types'
 
 // NOTE: roles are checked in the browser only (identity = a member id in localStorage).
 // This is a hackathon demo, not real security — the database accepts writes from anyone.
@@ -49,6 +52,10 @@ export default function Family() {
   const [inviting, setInviting] = useState(false)
   // Intake starts with the welcome (logo + Begin), once per browser.
   const [welcomed, setWelcomed] = useState(hasSeenWelcome)
+  // Family side: tapping a member opens a details sheet. The storyteller's rows stay plain.
+  const isStoryteller = useIsStoryteller()
+  const [sheetMember, setSheetMember] = useState<FamilyMember | null>(null)
+  const [waiting, setWaiting] = useState<Record<string, number>>({})
 
   async function refresh() {
     const [f, m] = await Promise.all([getFamily(code), listFamilyMembers(code)])
@@ -75,6 +82,10 @@ export default function Family() {
   useEffect(() => {
     if (me) saveMyIdentity({ code, name: me.name })
   }, [code, me])
+
+  useEffect(() => {
+    if (isStoryteller === false) getWaitingCounts().then(setWaiting).catch((err) => console.error(err))
+  }, [isStoryteller])
 
   if (!welcomed) {
     return (
@@ -151,17 +162,28 @@ export default function Family() {
             {members.map((m) => {
               const isMe = m.id === me.id
               const subtext = m.relationship ?? (m.role === 'organizer' ? 'Started this family' : undefined)
-              return (
-                <li key={m.id} className="flex items-center gap-4 py-3.5">
+              const row = (
+                <>
                   <Avatar name={m.name} size={52} />
-                  <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-serif text-[19px] leading-snug break-words text-ink">
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-serif text-[19px] leading-snug break-words text-ink">
                       <span className="min-w-0">{m.name}</span>
                       {isMe && <span className="text-meta shrink-0">· you</span>}
-                    </p>
-                    {subtext && <p className="text-meta">{subtext}</p>}
-                  </div>
+                    </span>
+                    {subtext && <span className="text-meta block">{subtext}</span>}
+                  </span>
                   <RoleBadge role={m.role} />
+                </>
+              )
+              return (
+                <li key={m.id}>
+                  {isStoryteller === false ? (
+                    <button type="button" onClick={() => setSheetMember(m)} aria-haspopup="dialog" className="flex w-full items-center gap-4 py-3.5 text-left">
+                      {row}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-4 py-3.5">{row}</div>
+                  )}
                 </li>
               )
             })}
@@ -186,6 +208,7 @@ export default function Family() {
       </div>
 
       {inviting && <InviteSheet code={code} familyName={familyName} onClose={() => setInviting(false)} />}
+      <MemberSheet member={sheetMember} waiting={sheetMember ? waiting[sheetMember.id] : undefined} onClose={() => setSheetMember(null)} />
     </AppShell>
   )
 }
@@ -369,6 +392,7 @@ function EnvelopeWall() {
   const [shelf, setShelf] = useState<LetterShelf | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [releasing, setReleasing] = useState(false)
+  const [sheetEnvelope, setSheetEnvelope] = useState<Envelope | null>(null)
 
   const load = () => getLetterShelf().then(setShelf)
 
@@ -405,7 +429,7 @@ function EnvelopeWall() {
       {count > 0 && (
         <div className="space-y-4">
           {shelf.envelopes.map((e) => (
-            <EnvelopeCard key={e.id} envelope={e} />
+            <EnvelopeCard key={e.id} envelope={e} onOpen={() => setSheetEnvelope(e)} />
           ))}
         </div>
       )}
@@ -456,6 +480,7 @@ function EnvelopeWall() {
           )}
         </Card>
       )}
+      <EnvelopeSheet envelope={sheetEnvelope} onClose={() => setSheetEnvelope(null)} />
     </section>
   )
 }

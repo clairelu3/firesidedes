@@ -1,14 +1,14 @@
 // A sealed letter as readers see it: an envelope tied with twine under a wax seal, and only
 // "From Ama · For Lily · Opens June 12, 2030". Never a title or a hint of the topic.
-import { Lock, LockOpen } from 'lucide-react'
+import { Lock, LockOpen, MoreVertical } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import type { Envelope } from '../../types'
-import { CardMenu } from './CardMenu'
 import { useSvgId } from './Illustration'
 
-export function EnvelopeCard({ envelope }: { envelope: Envelope }) {
+// onOpen: the family side shows a bottom sheet; without it, the card opens the letter page.
+export function EnvelopeCard({ envelope, onOpen }: { envelope: Envelope; onOpen?: () => void }) {
   const navigate = useNavigate()
-  const open = () => navigate(`/letter/${envelope.id}`)
+  const open = onOpen ?? (() => navigate(`/letter/${envelope.id}`))
   const Icon = envelope.openable ? LockOpen : Lock
   return (
     <article className={`surface-card relative flex overflow-hidden ${envelope.openable ? 'ring-2 ring-pine/40' : ''}`}>
@@ -26,7 +26,15 @@ export function EnvelopeCard({ envelope }: { envelope: Envelope }) {
           </span>
         </span>
       </button>
-      <CardMenu items={[{ label: envelope.openable ? 'Open the letter' : 'Look at the envelope', onSelect: open }]} className="top-1/2 right-1.5 -translate-y-1/2" />
+      <button
+        type="button"
+        onClick={open}
+        aria-label="About this sealed letter"
+        aria-haspopup={onOpen ? 'dialog' : undefined}
+        className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-ink/70 hover:bg-ink/5"
+      >
+        <MoreVertical size={18} strokeWidth={1.75} aria-hidden="true" />
+      </button>
     </article>
   )
 }

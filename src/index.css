@@ -160,7 +160,32 @@
   }
 }
 
+/* Bottom sheet: slides up (280ms ease-out); follows the finger while dragging. */
+.sheet-panel {
+  transition:
+    transform 280ms ease-out,
+    height 280ms ease-out;
+}
+.sheet-panel.is-dragging {
+  transition: none;
+}
+.sheet-fade {
+  transition: opacity 280ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* Bottom sheet: fade only, no slide. */
+  .sheet-panel {
+    transform: none !important;
+    opacity: 0;
+    transition: opacity 200ms ease-out !important;
+  }
+  .sheet-panel.is-open {
+    opacity: 1;
+  }
+  .sheet-fade {
+    transition-duration: 200ms !important;
+  }
   /* Welcome screen: a plain fade instead of the press and rise. */
   .animate-stamp-press,
   .animate-rise {

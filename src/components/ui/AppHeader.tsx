@@ -7,25 +7,32 @@ import { getMyName } from '../../api'
 import { Avatar } from './Avatar'
 import { LogoStamp } from './LogoStamp'
 import { MenuDrawer } from './MenuDrawer'
+import { useIsStoryteller } from '../../lib/useViewer'
 
 export type AppHeaderProps = {
   back?: string // show a back chevron to this route instead of the menu
+  onBack?: () => void // go back within a screen's own steps instead of to a route
+  labeledBack?: boolean // storyteller steps: a worded "‹ Back" row under the wordmark
+  step?: string // "Step 2 of 4", shown beside the labeled back
   menu?: boolean // false hides the menu button (recording screens)
   subtitle?: ReactNode
   divider?: boolean // hairline under the subtitle (Family Book)
   right?: ReactNode // replaces the avatar
 }
 
-export function AppHeader({ back, menu = true, subtitle, divider = false, right }: AppHeaderProps) {
+export function AppHeader({ back, onBack, labeledBack = false, step, menu = true, subtitle, divider = false, right }: AppHeaderProps) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const name = getMyName()
+  const isStoryteller = useIsStoryteller()
+  const goBack = onBack ?? (() => back && navigate(back))
+  const hasBack = !!(back || onBack)
 
   return (
     <header className="relative z-20 grid grid-cols-[48px_1fr_48px] items-start px-4 pt-5 pb-2">
       <div className="flex h-12 items-center">
-        {back ? (
-          <HeaderIconButton label="Back" onClick={() => navigate(back)}>
+        {hasBack && labeledBack ? null : hasBack ? (
+          <HeaderIconButton label="Back" onClick={goBack}>
             <ChevronLeft size={26} strokeWidth={1.5} aria-hidden="true" />
           </HeaderIconButton>
         ) : menu ? (
@@ -52,7 +59,21 @@ export function AppHeader({ back, menu = true, subtitle, divider = false, right 
         )}
       </div>
 
-      {open && <MenuDrawer onClose={() => setOpen(false)} />}
+      {hasBack && labeledBack && (
+        <div className="col-span-3 mt-3 flex items-center justify-between gap-3 px-1">
+          <button
+            type="button"
+            onClick={goBack}
+            className="-ml-2 inline-flex min-h-12 items-center gap-1 rounded-full px-3 font-serif text-[20px] text-pine hover:bg-sage/60"
+          >
+            <ChevronLeft size={22} strokeWidth={1.75} aria-hidden="true" />
+            Back
+          </button>
+          {step && <span className="text-meta text-[15px]">{step}</span>}
+        </div>
+      )}
+
+      {open && <MenuDrawer onClose={() => setOpen(false)} fullScreen={isStoryteller === true} />}
     </header>
   )
 }

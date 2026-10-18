@@ -1328,6 +1328,16 @@ export async function getLetterShelf(): Promise<LetterShelf> {
   return shelf
 }
 
+/** Family page: how many sealed letters are waiting for each member. A count only, never which letters or what's in them. */
+export async function getWaitingCounts(): Promise<Record<string, number>> {
+  const [ctx, letters] = await Promise.all([store.context(), store.letters()])
+  const counts: Record<string, number> = {}
+  for (const m of ctx.members) {
+    counts[m.id] = letters.filter((l) => isSealed(l) && isRecipient(l, m.id, ctx.members) && !l.openedAt[m.id]).length
+  }
+  return counts
+}
+
 async function releaseAfterLetters(keeperId: string | null): Promise<number> {
   const letters = (await store.letters()).filter((l) => isSealed(l) && l.releaseMode === 'after' && !l.keeperReleasedAt && (keeperId === null || l.keeperId === keeperId))
   const now = getToday().toISOString()

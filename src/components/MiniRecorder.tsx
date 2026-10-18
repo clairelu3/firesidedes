@@ -1,9 +1,10 @@
-// A compact record card for short recordings: a P.S., the two spoken prompts, a voice reply.
-import { LoaderCircle, Mic, Square } from 'lucide-react'
+// A short recording in a card: a P.S., the two spoken prompts, a voice reply.
+// Worded buttons only ("Record", "Stop", "Forget this"), never a bare icon.
+import { LoaderCircle, Mic, Square, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { formatDuration } from '../lib/format'
 import { type Recording, useLetterRecorder } from '../lib/useLetterRecorder'
-import { TextButton } from './ui/Button'
+import { PrimaryButton, SecondaryButton } from './ui/Button'
 import { Notice } from './ui/Notice'
 
 type Props = {
@@ -35,35 +36,28 @@ export function MiniRecorder({ label, hint, lang = 'en-US', onSave }: Props) {
 
   return (
     <div className="surface-card p-4">
-      <div className="flex items-center gap-4">
-        <button
-          type="button"
-          onClick={rec.recording ? stop : rec.start}
-          disabled={saving}
-          aria-label={rec.recording ? `Stop recording ${label}` : `Record ${label}`}
-          className={`relative flex size-14 shrink-0 items-center justify-center rounded-full bg-vermilion text-white shadow-mic hover:bg-vermilion-dark disabled:opacity-70`}
-        >
-          {rec.recording && <span className="absolute -inset-2 rounded-full bg-vermilion/15 motion-safe:animate-halo" aria-hidden="true" />}
-          {saving ? (
-            <LoaderCircle size={22} strokeWidth={1.5} className="relative motion-safe:animate-spin" aria-hidden="true" />
-          ) : rec.recording ? (
-            <Square size={18} fill="currentColor" strokeWidth={0} className="relative" aria-hidden="true" />
-          ) : (
-            <Mic size={24} strokeWidth={1.5} className="relative" aria-hidden="true" />
-          )}
-        </button>
-        <div className="min-w-0 flex-1">
-          <p className="text-card-title">{label}</p>
-          <p className="text-meta">{rec.recording ? `Recording · ${formatDuration(rec.elapsed)} · tap to stop` : saving ? 'Saving…' : hint}</p>
-        </div>
+      <p className="text-card-title">{label}</p>
+      {hint && <p className="text-meta">{hint}</p>}
+      <div className="mt-3 space-y-2">
+        {rec.recording ? (
+          <>
+            <PrimaryButton danger arrow={false} onClick={stop} icon={<Square size={18} fill="currentColor" strokeWidth={0} aria-hidden="true" />}>
+              Stop · {formatDuration(rec.elapsed)}
+            </PrimaryButton>
+            <SecondaryButton onClick={rec.forget} icon={<Trash2 size={18} strokeWidth={1.5} aria-hidden="true" />}>
+              Forget this
+            </SecondaryButton>
+          </>
+        ) : (
+          <SecondaryButton
+            onClick={rec.start}
+            disabled={saving}
+            icon={saving ? <LoaderCircle size={18} strokeWidth={1.5} className="motion-safe:animate-spin" aria-hidden="true" /> : <Mic size={18} strokeWidth={1.5} className="text-vermilion" aria-hidden="true" />}
+          >
+            {saving ? 'Saving…' : 'Record'}
+          </SecondaryButton>
+        )}
       </div>
-      {rec.recording && (
-        <div className="mt-2 flex justify-end">
-          <TextButton tone="muted" onClick={rec.forget}>
-            Forget this
-          </TextButton>
-        </div>
-      )}
       {(rec.error || error) && (
         <Notice tone="error" className="mt-3">
           {rec.error ?? error}

@@ -1,7 +1,7 @@
 // /letter/:id — open or read a letter. Readers see an envelope until it's openable; on the day:
 // "Open now / Later / Open with someone", then heads-up (if sensitive) → P.S. → the letter →
 // a voice reply. api.ts decides how much of the letter this viewer may see.
-import { Copy, Lock, LockOpen } from 'lucide-react'
+import { Copy, Info, Lock, LockOpen } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
@@ -9,6 +9,7 @@ import { addReply, getLetter, getLifeMap, getViewer, markLetterOpened, releaseAs
 import { MiniRecorder } from '../components/MiniRecorder'
 import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
+import { BottomSheet } from '../components/ui/BottomSheet'
 import { Avatar } from '../components/ui/Avatar'
 import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -35,6 +36,7 @@ export default function LetterPage() {
   const [signature, setSignature] = useState('家書')
   const [phase, setPhase] = useState<Phase>('choices')
   const [confirmRelease, setConfirmRelease] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function load() {
@@ -133,7 +135,7 @@ export default function LetterPage() {
   if (access.kind === 'author') {
     const { letter, replies } = access
     return (
-      <AppShell back="/letterbox">
+      <AppShell back={`/letterbox/${letter.id}`} labeledBack>
         <LetterTitle eyebrow="Your letter" title={letter.title} sub={releaseSummary(letter, members)} seal={sealFor(stages.find((s) => s.id === letter.stageId))} />
         <LetterBody letter={letter} fromName="you" stages={stages} />
         <Replies replies={replies} title="Replies" />
@@ -214,7 +216,13 @@ export default function LetterPage() {
   return (
     <AppShell back="/book">
       <LetterTitle eyebrow={`A letter from ${fromName}`} title={letter.title} seal={sealFor(stages.find((s) => s.id === letter.stageId))} />
-      <LetterBody letter={letter} fromName={fromName} stages={stages} />
+      {/* P.S. and replies live in a sheet, so the letter itself stays on the page. */}
+      <div className="-mt-4 mb-8">
+        <SecondaryButton compact className="w-auto" aria-haspopup="dialog" onClick={() => setDetailsOpen(true)} icon={<Info size={17} strokeWidth={1.5} aria-hidden="true" />}>
+          Details
+        </SecondaryButton>
+      </div>
+      <LetterBody letter={letter} fromName={fromName} stages={stages} showPs={false} />
 
       {letter.sensitive.mentalHealth && (
         <p className="text-meta mt-10 border-t border-hairline pt-6 text-[14.5px] leading-[1.6]">
@@ -232,9 +240,34 @@ export default function LetterPage() {
             setAccess({ ...access, replies: [...replies, reply] })
           }}
         />
-        <Replies replies={replies} title="Your replies" />
+        {replies.length > 0 && <p className="text-meta mt-3 text-center">Your replies are under Details.</p>}
       </section>
       <SignatureLine className="mt-10" seal={signature} />
+
+      <BottomSheet open={detailsOpen} onClose={() => setDetailsOpen(false)} title="Details">
+        <div className="space-y-6">
+          <section>
+            <p className="text-eyebrow mb-3">{fromName}’s P.S.</p>
+            {letter.psPieces.length ? (
+              <div className="space-y-3">
+                <AudioCard
+                  title={letter.psPieces.map((p) => PS_PROMPT_LABEL[p.prompt ?? 'ps']).join(' · ')}
+                  meta={`From ${fromName}`}
+                  urls={letter.psPieces.map((p) => p.audioUrl)}
+                  thumb={<Avatar name={fromName} size={96} />}
+                />
+                {letter.psPieces.map((p) => p.transcript && <p key={p.id} className="text-body">{p.transcript}</p>)}
+              </div>
+            ) : (
+              <p className="text-body text-muted">No P.S. with this letter.</p>
+            )}
+          </section>
+          <section>
+            <p className="text-eyebrow mb-3">Voice replies</p>
+            {replies.length ? <Replies replies={replies} title="" /> : <p className="text-body text-muted">No replies yet. You can send one at the end of the letter.</p>}
+          </section>
+        </div>
+      </BottomSheet>
     </AppShell>
   )
 }
@@ -259,12 +292,12 @@ function LetterTitle({ eyebrow, title, sub, seal }: { eyebrow: string; title: st
 }
 
 // P.S. first, then each passage with the recording it came from underneath.
-function LetterBody({ letter, fromName, stages }: { letter: Letter; fromName: string; stages: LifeStage[] }) {
+function LetterBody({ letter, fromName, stages, showPs = true }: { letter: Letter; fromName: string; stages: LifeStage[]; showPs?: boolean }) {
   const pieceOf = (memoId: string) => letter.pieces.find((p) => p.id === memoId)
   const thumb = thumbFor(letter.stageId, stages)
   return (
     <div className="space-y-6">
-      {letter.psPieces.length > 0 && (
+      {showPs && letter.psPieces.length > 0 && (
         <AudioCard
           title={fromName === 'you' ? 'Your P.S.' : `${fromName}’s P.S.`}
           meta={letter.psPieces.map((p) => PS_PROMPT_LABEL[p.prompt ?? 'ps']).join(' · ')}
@@ -297,8 +330,8 @@ function LetterBody({ letter, fromName, stages }: { letter: Letter; fromName: st
 function Replies({ replies, title }: { replies: LetterReply[]; title: string }) {
   if (!replies.length) return null
   return (
-    <div className="mt-8">
-      <SectionHeader title={title} />
+    <div className={title ? 'mt-8' : ''}>
+      {title && <SectionHeader title={title} />}
       <div className="space-y-4">
         {replies.map((r) => (
           <AudioCard key={r.id} title={`From ${r.memberName}`} meta="A voice reply" audioUrl={r.audioUrl} thumb={<Avatar name={r.memberName} size={96} />} />

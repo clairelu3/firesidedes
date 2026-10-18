@@ -6,6 +6,7 @@ import Chapters from './pages/Chapters'
 import Family from './pages/Family'
 import LetterPage from './pages/Letter'
 import LetterFlow from './pages/LetterFlow'
+import LetterDetail from './pages/LetterDetail'
 import Letterbox from './pages/Letterbox'
 import Life from './pages/Life'
 import Memories from './pages/Memories'
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/family/:code" element={<Family />} />
         <Route path="/life" element={<Life />} />
         <Route path="/letterbox" element={<Letterbox />} />
+        <Route path="/letterbox/:id" element={<LetterDetail />} />
         {/* Recording = a letter: record → release decision → people check → P.S. → done */}
         <Route path="/record" element={<LetterFlow />} />
         <Route path="/letter/:id" element={<LetterPage />} />

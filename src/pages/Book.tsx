@@ -2,7 +2,9 @@
 // cards (tap a title to read), sealed letters for this reader as envelopes, and a signature.
 import { Search, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { getLetterShelf, getLifeMap, listChapters, listMemos, type LetterShelf } from '../api'
+import { EnvelopeSheet, LetterInfoSheet } from '../components/FamilySheets'
 import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
 import { Card } from '../components/ui/Card'
@@ -12,8 +14,8 @@ import { HeaderIconButton } from '../components/ui/AppHeader'
 import { Illustration } from '../components/ui/Illustration'
 import { PillInput } from '../components/ui/OptionList'
 import { SignatureLine } from '../components/ui/SignatureLine'
-import { StoryPassages } from '../components/ui/story'
 import { cjkName, sealFor, thumbFor } from '../lib/illustrations'
+import { useIsStoryteller } from '../lib/useViewer'
 import type { Chapter, Envelope, LifeStage, Memo } from '../types'
 
 type Part = { number: number; stage?: LifeStage; chapters: Chapter[]; envelopes: Envelope[] }
@@ -43,7 +45,11 @@ export default function Book() {
   const [memos, setMemos] = useState<Memo[]>([])
   const [shelf, setShelf] = useState<LetterShelf | null>(null)
   const [signature, setSignature] = useState('家書')
-  const [reading, setReading] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const isStoryteller = useIsStoryteller()
+  // Family side: details open in bottom sheets so the reader keeps their place.
+  const [sheetChapter, setSheetChapter] = useState<Chapter | null>(null)
+  const [sheetEnvelope, setSheetEnvelope] = useState<Envelope | null>(null)
   const [searching, setSearching] = useState(false)
   const [query, setQuery] = useState('')
 
@@ -107,7 +113,7 @@ export default function Book() {
       {forToday.length > 0 && (
         <div className="mb-2 space-y-4 pt-2">
           {forToday.map((e) => (
-            <EnvelopeCard key={e.id} envelope={e} />
+            <EnvelopeCard key={e.id} envelope={e} onOpen={() => setSheetEnvelope(e)} />
           ))}
         </div>
       )}
@@ -123,7 +129,8 @@ export default function Book() {
           <div className="space-y-4">
             {part.chapters.map((chapter) => {
               const recs = memosFor(chapter)
-              const open = reading === chapter.id
+              // Storyteller: her own letter opens as a full screen. Family: a details sheet.
+              const openDetails = isStoryteller ? (chapter.letterId ? () => navigate(`/letterbox/${chapter.letterId}`) : undefined) : () => setSheetChapter(chapter)
               return (
                 <AudioCard
                   key={chapter.id}
@@ -131,15 +138,13 @@ export default function Book() {
                   meta={dayLabel(recs[0]?.createdAt)}
                   urls={recs.map((m) => m.audioUrl)}
                   thumb={thumbFor(chapter.stageId, stages)}
-                  onTitleClick={() => setReading(open ? null : chapter.id)}
-                  menu={[{ label: open ? 'Close the letter' : 'Read the letter', onSelect: () => setReading(open ? null : chapter.id) }]}
-                >
-                  {open && <StoryPassages passages={chapter.passages} />}
-                </AudioCard>
+                  onTitleClick={openDetails}
+                  onMore={openDetails}
+                />
               )
             })}
             {part.envelopes.filter((e) => !e.openable).map((e) => (
-              <EnvelopeCard key={e.id} envelope={e} />
+              <EnvelopeCard key={e.id} envelope={e} onOpen={isStoryteller ? undefined : () => setSheetEnvelope(e)} />
             ))}
           </div>
         </section>
@@ -157,6 +162,14 @@ export default function Book() {
           <SignatureLine className="relative ml-auto" seal={signature} />
         </footer>
       )}
+
+      <LetterInfoSheet
+        chapter={sheetChapter}
+        memos={sheetChapter ? memosFor(sheetChapter) : []}
+        stage={stages.find((s) => s.id === sheetChapter?.stageId)}
+        onClose={() => setSheetChapter(null)}
+      />
+      <EnvelopeSheet envelope={sheetEnvelope} onClose={() => setSheetEnvelope(null)} />
     </AppShell>
   )
 }

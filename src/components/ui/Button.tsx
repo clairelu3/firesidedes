@@ -1,14 +1,14 @@
 import { ArrowRight } from 'lucide-react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement> & { icon?: ReactNode; compact?: boolean }
+type Props = ButtonHTMLAttributes<HTMLButtonElement> & { icon?: ReactNode; compact?: boolean; large?: boolean }
 
 // Full-width deep-green pill with a serif label and a trailing arrow: "Seal this memory →".
-export function PrimaryButton({ children, icon, compact = false, arrow = true, danger = false, className = '', type = 'button', ...rest }: Props & { arrow?: boolean; danger?: boolean }) {
+export function PrimaryButton({ children, icon, compact = false, large = false, arrow = true, danger = false, className = '', type = 'button', ...rest }: Props & { arrow?: boolean; danger?: boolean }) {
   return (
     <button
       type={type}
-      className={`inline-flex w-full items-center justify-center gap-3 rounded-full font-serif font-medium text-card transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${danger ? 'bg-vermilion hover:bg-vermilion-dark' : 'bg-pine hover:bg-pine-dark'} ${compact ? 'h-12 px-5 text-[17px]' : 'h-[58px] px-6 text-[19px]'} ${className}`}
+      className={`inline-flex w-full items-center justify-center gap-3 rounded-full font-serif font-medium text-card transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${danger ? 'bg-vermilion hover:bg-vermilion-dark' : 'bg-pine hover:bg-pine-dark'} ${large ? 'min-h-[62px] px-6 py-2 text-[20px]' : compact ? 'h-12 px-5 text-[17px]' : 'h-[58px] px-6 text-[19px]'} ${className}`}
       {...rest}
     >
       {icon}
@@ -19,11 +19,11 @@ export function PrimaryButton({ children, icon, compact = false, arrow = true, d
 }
 
 // Quiet outlined pill for second choices ("Later", "Cancel").
-export function SecondaryButton({ children, icon, compact = false, className = '', type = 'button', ...rest }: Props) {
+export function SecondaryButton({ children, icon, compact = false, large = false, className = '', type = 'button', ...rest }: Props) {
   return (
     <button
       type={type}
-      className={`inline-flex w-full items-center justify-center gap-2.5 rounded-full border border-ink/15 bg-card font-serif font-medium text-ink transition-colors hover:bg-parchment disabled:cursor-not-allowed disabled:opacity-50 ${compact ? 'h-12 px-5 text-[16px]' : 'h-[54px] px-6 text-[18px]'} ${className}`}
+      className={`inline-flex w-full items-center justify-center gap-2.5 rounded-full border border-ink/15 bg-card font-serif font-medium text-ink transition-colors hover:bg-parchment disabled:cursor-not-allowed disabled:opacity-50 ${large ? 'min-h-[62px] px-5 py-2 text-[20px]' : compact ? 'h-12 px-5 text-[16px]' : 'h-[54px] px-6 text-[18px]'} ${className}`}
       {...rest}
     >
       {icon}

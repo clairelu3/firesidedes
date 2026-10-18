@@ -2,13 +2,11 @@
 // hear replies, and manage her letters. Only she can see or change these (checked in api.ts).
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { decideRelease, deleteLetter, finishLetter, getLifeMap, getReleasePresets, getViewer, listMyLetters, releaseLetterNow, type Viewer } from '../api'
-import { ReleasePicker, releaseChoiceError } from '../components/ReleasePicker'
+import { getLifeMap, getViewer, listMyLetters, type Viewer } from '../api'
 import { AppShell, TAGLINE } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
 import { Avatar } from '../components/ui/Avatar'
-import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/Button'
-import type { MenuItem } from '../components/ui/CardMenu'
+import { PrimaryButton, SecondaryButton } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Notice } from '../components/ui/Notice'
 import { PageHeader } from '../components/ui/PageHeader'
@@ -17,7 +15,7 @@ import { SectionHeader } from '../components/ui/SectionHeader'
 import { formatMemoDate } from '../lib/format'
 import { thumbFor } from '../lib/illustrations'
 import { openedSummary, releaseSummary } from '../lib/letterText'
-import type { FamilyMember, Letter, LetterReply, LifeStage, ReleaseChoice, ReleasePreset } from '../types'
+import type { FamilyMember, Letter, LetterReply, LifeStage } from '../types'
 
 type Data = { letters: Letter[]; replies: LetterReply[]; members: FamilyMember[] }
 
@@ -35,7 +33,6 @@ export default function Letterbox() {
   const [viewer, setViewer] = useState<Viewer | null>(null)
   const [data, setData] = useState<Data | null>(null)
   const [stages, setStages] = useState<LifeStage[]>([])
-  const [presets, setPresets] = useState<ReleasePreset[]>([])
   const [showAll, setShowAll] = useState(false)
   const [error, setError] = useState(false)
 
@@ -43,9 +40,8 @@ export default function Letterbox() {
     const v = await getViewer()
     setViewer(v)
     if (!v.isStoryteller) return
-    const [d, p, map] = await Promise.all([listMyLetters(), getReleasePresets(), getLifeMap()])
+    const [d, map] = await Promise.all([listMyLetters(), getLifeMap()])
     setData(d)
-    setPresets(p)
     setStages(map?.stages ?? [])
   }
 
@@ -74,9 +70,9 @@ export default function Letterbox() {
 
       <RecordButton onClick={() => navigate('/record?start=1')} />
       <div className="mt-1 text-center">
-        <TextButton tone="muted" onClick={() => navigate('/record?secret=1')}>
+        <SecondaryButton large className="mt-2" onClick={() => navigate('/record?secret=1')}>
           Something you’ve never told anyone
-        </TextButton>
+        </SecondaryButton>
       </div>
 
       {error && (
@@ -116,7 +112,7 @@ export default function Letterbox() {
                   <p className="text-eyebrow mb-3">{g.title}</p>
                   <div className="space-y-4">
                     {inGroup.map((l) => (
-                      <LetterItem key={l.id} letter={l} stages={stages} members={data.members} presets={presets} onChanged={() => load().catch((err) => console.error(err))} />
+                      <LetterItem key={l.id} letter={l} stages={stages} members={data.members}/>
                     ))}
                   </div>
                 </div>
@@ -125,7 +121,7 @@ export default function Letterbox() {
           ) : (
             <div className="space-y-4">
               {letters.slice(0, RECENT).map((l) => (
-                <LetterItem key={l.id} letter={l} stages={stages} members={data.members} presets={presets} onChanged={() => load().catch((err) => console.error(err))} />
+                <LetterItem key={l.id} letter={l} stages={stages} members={data.members}/>
               ))}
             </div>
           )}
@@ -136,59 +132,9 @@ export default function Letterbox() {
   )
 }
 
-function LetterItem({
-  letter,
-  stages,
-  members,
-  presets,
-  onChanged,
-}: {
-  letter: Letter
-  stages: LifeStage[]
-  members: FamilyMember[]
-  presets: ReleasePreset[]
-  onChanged: () => void
-}) {
+// One of her letters: listen right here, or open it (full screen) to change or release it.
+function LetterItem({ letter, stages, members }: { letter: Letter; stages: LifeStage[]; members: FamilyMember[] }) {
   const navigate = useNavigate()
-  const [panel, setPanel] = useState<'none' | 'edit' | 'delete'>('none')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [choice, setChoice] = useState<ReleaseChoice>({
-    releaseMode: letter.releaseMode,
-    releaseAt: letter.releaseAt,
-    recipients: letter.recipients,
-    keeperId: letter.keeperId,
-  })
-
-  const opened = Object.keys(letter.openedAt).length > 0
-  const others = members.filter((m) => m.role !== 'storyteller')
-
-  async function act(action: () => Promise<unknown>) {
-    setBusy(true)
-    setError(null)
-    try {
-      await action()
-      setPanel('none')
-      onChanged()
-    } catch (err) {
-      console.error(err)
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const menu: MenuItem[] = [{ label: 'Open this letter', onSelect: () => navigate(`/letter/${letter.id}`) }]
-  if (!opened) {
-    menu.push({ label: letter.decided ? 'Change who and when' : 'Choose when they hear it', onSelect: () => setPanel('edit') })
-    if (letter.releaseMode !== 'now') menu.push({ label: 'Release now', onSelect: () => act(() => releaseLetterNow(letter.id)) })
-    if (letter.status === 'in_progress' && letter.releaseMode !== 'now') {
-      menu.push({ label: 'Add to this letter', onSelect: () => navigate(`/record?add=${letter.id}`) })
-      menu.push({ label: 'This letter is finished', onSelect: () => act(() => finishLetter(letter.id)) })
-    }
-    menu.push({ label: 'Delete', danger: true, onSelect: () => setPanel('delete') })
-  }
-
   const note = [
     letter.status === 'in_progress' ? 'In progress' : null,
     releaseSummary(letter, members),
@@ -200,54 +146,10 @@ function LetterItem({
     .join(' · ')
 
   return (
-    <AudioCard
-      title={letter.title}
-      meta={formatMemoDate(letter.createdAt)}
-      note={note}
-      urls={[...letter.psPieces, ...letter.pieces].map((p) => p.audioUrl)}
-      thumb={thumbFor(letter.stageId, stages)}
-      menu={menu}
-    >
-      {(panel !== 'none' || error) && (
-        <div className="space-y-3">
-          {panel === 'edit' && (
-            <>
-              <ReleasePicker value={choice} onChange={setChoice} presets={presets} members={others} storytellerName="you" />
-              <div className="flex gap-3">
-                <SecondaryButton compact onClick={() => setPanel('none')}>
-                  Cancel
-                </SecondaryButton>
-                <PrimaryButton
-                  compact
-                  arrow={false}
-                  disabled={busy}
-                  onClick={() => {
-                    const problem = releaseChoiceError(choice)
-                    if (problem) setError(problem)
-                    else act(() => decideRelease(letter.id, choice))
-                  }}
-                >
-                  Save
-                </PrimaryButton>
-              </div>
-            </>
-          )}
-          {panel === 'delete' && (
-            <>
-              <p className="text-body">Delete this letter? This can’t be undone.</p>
-              <div className="flex gap-3">
-                <SecondaryButton compact onClick={() => setPanel('none')}>
-                  Keep it
-                </SecondaryButton>
-                <PrimaryButton compact arrow={false} disabled={busy} danger onClick={() => act(() => deleteLetter(letter.id))}>
-                  Delete
-                </PrimaryButton>
-              </div>
-            </>
-          )}
-          {error && <Notice tone="error">{error}</Notice>}
-        </div>
-      )}
+    <AudioCard title={letter.title} meta={formatMemoDate(letter.createdAt)} note={note} urls={[...letter.psPieces, ...letter.pieces].map((p) => p.audioUrl)} thumb={thumbFor(letter.stageId, stages)}>
+      <SecondaryButton large onClick={() => navigate(`/letterbox/${letter.id}`)}>
+        Open this letter
+      </SecondaryButton>
     </AudioCard>
   )
 }

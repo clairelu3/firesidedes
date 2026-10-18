@@ -17,19 +17,19 @@ export function RecordButton({
   disabled?: boolean
 }) {
   const recording = state === 'recording'
+  // One button: the circle and its worded label are both tappable.
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative flex size-[172px] items-center justify-center">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || state === 'saving'}
+      aria-pressed={recording}
+      className="group mx-auto flex flex-col items-center rounded-[24px] px-4 pb-2 focus-visible:outline-offset-4 disabled:cursor-default"
+    >
+      <span className="relative flex size-[172px] items-center justify-center">
         <span className={`absolute inset-0 rounded-full bg-vermilion/[0.07] ${recording ? 'motion-safe:animate-halo [animation-delay:300ms]' : ''}`} aria-hidden="true" />
         <span className={`absolute inset-[18px] rounded-full bg-vermilion/[0.11] ${recording ? 'motion-safe:animate-halo' : ''}`} aria-hidden="true" />
-        <button
-          type="button"
-          onClick={onClick}
-          disabled={disabled || state === 'saving'}
-          aria-label={recording ? 'Stop recording' : 'Start recording'}
-          aria-pressed={recording}
-          className="relative flex size-[120px] items-center justify-center rounded-full bg-vermilion text-white shadow-mic transition-colors hover:bg-vermilion-dark disabled:opacity-80"
-        >
+        <span className="relative flex size-[120px] items-center justify-center rounded-full bg-vermilion text-white shadow-mic transition-colors group-hover:bg-vermilion-dark group-disabled:opacity-80">
           {state === 'saving' ? (
             <LoaderCircle size={40} strokeWidth={1.5} className="motion-safe:animate-spin" aria-hidden="true" />
           ) : recording ? (
@@ -37,12 +37,12 @@ export function RecordButton({
           ) : (
             <Mic size={46} strokeWidth={1.5} aria-hidden="true" />
           )}
-        </button>
-      </div>
-      <div className="mt-1 text-center" aria-live="polite">
-        <p className="font-serif text-[21px] text-ink">{label}</p>
-        {sublabel && <p className="text-meta mt-1">{sublabel}</p>}
-      </div>
-    </div>
+        </span>
+      </span>
+      <span className="mt-1 text-center" aria-live="polite">
+        <span className="block font-serif text-[21px] text-ink">{label}</span>
+        {sublabel && <span className="text-meta mt-1 block">{sublabel}</span>}
+      </span>
+    </button>
   )
 }
