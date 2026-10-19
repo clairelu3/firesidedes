@@ -1,8 +1,9 @@
-// Hidden controls for recording the demo video. Shift+D toggles it.
+// Controls for recording the demo video. Tapping your avatar in the header toggles it.
 // Switch viewer, fake "today", play the keeper's part, reset to the seed. Changes reload the page.
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { demoKeeperRelease, demoReset, demoSetViewer, getViewer, IS_DEMO, type Viewer } from '../api'
+import { TOGGLE_DEMO_PANEL } from '../lib/demoPanel'
 import { getFakeToday, setFakeToday, todayString } from '../lib/today'
 import { resetWelcome } from '../lib/welcome'
 import { SecondaryButton } from './ui/Button'
@@ -32,18 +33,24 @@ export function DemoPanel() {
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
+    function onToggle() {
+      setOpen((o) => {
+        writeOpen(!o)
+        return !o
+      })
+    }
     function onKey(e: KeyboardEvent) {
-      const target = e.target as HTMLElement | null
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
-      if (e.shiftKey && (e.key === 'D' || e.key === 'd') && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        setOpen((o) => {
-          writeOpen(!o)
-          return !o
-        })
+      if (e.key === 'Escape') {
+        writeOpen(false)
+        setOpen(false)
       }
     }
+    window.addEventListener(TOGGLE_DEMO_PANEL, onToggle)
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener(TOGGLE_DEMO_PANEL, onToggle)
+      window.removeEventListener('keydown', onKey)
+    }
   }, [])
 
   useEffect(() => {
@@ -55,16 +62,29 @@ export function DemoPanel() {
   const reload = () => window.location.reload()
   const viewers = viewer?.members ?? []
 
+  const close = () => {
+    writeOpen(false)
+    setOpen(false)
+  }
+
   return (
-    <div className="fixed top-3 right-3 z-[60] max-h-[calc(100dvh-24px)] w-[290px] overflow-y-auto rounded-[18px] bg-card p-4 font-serif shadow-float ring-1 ring-hairline" role="dialog" aria-label="Demo controls">
+    // Same 430px column as the app, so the menu stays inside the phone frame on a wide screen.
+    <div className="fixed inset-x-0 top-0 z-[60] mx-auto h-0 max-w-[430px]">
+      {/* Tapping anywhere outside closes it, like a native menu. */}
+      <button type="button" aria-label="Close demo controls" tabIndex={-1} onClick={close} className="fixed inset-0 cursor-default" />
+      <div
+        className="motion-safe:animate-drop absolute top-[74px] right-3 w-[min(290px,calc(100vw-24px))] origin-top-right rounded-[18px] bg-card font-serif shadow-float ring-1 ring-hairline"
+        role="dialog"
+        aria-label="Demo controls"
+      >
+        {/* Little pointer up to the avatar it dropped from. */}
+        <span aria-hidden="true" className="absolute -top-[7px] right-[19px] size-3.5 rotate-45 rounded-[3px] bg-card ring-1 ring-hairline [clip-path:polygon(0_0,100%_0,0_100%)]" />
+        <div className="relative max-h-[calc(100dvh-160px)] overflow-y-auto p-4">
       <div className="flex items-center justify-between">
         <p className="text-eyebrow text-ink">Demo controls</p>
         <button
           type="button"
-          onClick={() => {
-            writeOpen(false)
-            setOpen(false)
-          }}
+          onClick={close}
           aria-label="Close demo controls"
           className="flex size-9 items-center justify-center rounded-full text-muted hover:bg-ink/5"
         >
@@ -159,6 +179,8 @@ export function DemoPanel() {
         )}
       </div>
       {message && <p className="mt-2 text-sm text-muted">{message}</p>}
+        </div>
+      </div>
     </div>
   )
 }

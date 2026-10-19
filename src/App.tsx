@@ -47,7 +47,7 @@ export default function App() {
         <Route path="/read" element={<Navigate to="/book" replace />} />
         <Route path="*" element={<Navigate to="/family" replace />} />
       </Routes>
-      {/* Shift+D: demo controls for recording the video */}
+      {/* Demo controls for recording the video: tap the avatar in the header */}
       <DemoPanel />
     </>
   )

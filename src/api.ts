@@ -1322,7 +1322,10 @@ export async function getLetterShelf(): Promise<LetterShelf> {
   const shelf: LetterShelf = { fromName: ctx.storytellerName, envelopes: [], openedChapters: [], waitingForOthers: 0, keeperLetters: 0, isStoryteller: isStoryteller(ctx) }
   if (!me) return shelf
   if (isStoryteller(ctx)) {
-    shelf.waitingForOthers = sealed.filter((l) => !hasBeenOpened(l)).length
+    // The storyteller sees her own sealed letters as envelopes too, so she knows what's waiting and for whom.
+    const waiting = sealed.filter((l) => !hasBeenOpened(l))
+    shelf.envelopes = waiting.map((l) => envelopeFor(l, ctx, me.id))
+    shelf.waitingForOthers = waiting.length
     return shelf
   }
   const mine = sealed.filter((l) => isRecipient(l, me.id, ctx.members))
@@ -1364,7 +1367,7 @@ export async function releaseAsKeeper(): Promise<number> {
   return releaseAfterLetters(ctx.me.id)
 }
 
-// --- demo controls (Shift+D panel) ---
+// --- demo controls (opened from the header avatar) ---
 
 export async function demoSetViewer(memberId: string) {
   if (IS_DEMO) {

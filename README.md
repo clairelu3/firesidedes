@@ -12,7 +12,7 @@ Built at [hackathon name] · October 2026
 
 ## Demo mode
 
-`VITE_DEMO_MODE` defaults to `true`: the app runs with no backend, on an in-memory store saved to localStorage and seeded with Ama's family (recorded audio goes to IndexedDB). Press **Shift+D** for the demo controls: switch the viewer (Ama, Lily, Mei, David), set a fake "today", play the keeper's release, or reset the seed. Set `VITE_DEMO_MODE=false` to use Supabase, after running `supabase/postscript.sql`. Seed audio: `scripts/make-demo-audio.sh` (macOS `say`).
+`VITE_DEMO_MODE` defaults to `true`: the app runs with no backend, on an in-memory store saved to localStorage and seeded with Ama's family (recorded audio goes to IndexedDB). Tap your avatar (top right of the header) for the demo controls: switch the viewer (Ama, Lily, Mei, David), set a fake "today", play the keeper's release, or reset the seed. Set `VITE_DEMO_MODE=false` to use Supabase, after running `supabase/postscript.sql`. Seed audio: `scripts/make-demo-audio.sh` (macOS `say`).
 
 ## How it works
 
