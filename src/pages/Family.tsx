@@ -327,9 +327,11 @@ function CoverPlaceholder({
   const content = (
     <>
       <Illustration slot="house-tainan" className="absolute inset-0 opacity-70" />
-      <span className="relative flex size-14 items-center justify-center rounded-full bg-card text-pine shadow-card">
-        <Camera size={24} strokeWidth={1.5} aria-hidden="true" />
-      </span>
+      {isOrganizer && (
+        <span className="relative flex size-14 items-center justify-center rounded-full bg-card text-pine shadow-card">
+          <Camera size={24} strokeWidth={1.5} aria-hidden="true" />
+        </span>
+      )}
       <span className="text-title relative mt-4">{isOrganizer ? 'Add a family photo' : familyName}</span>
       <span className="text-body relative mt-2 max-w-[260px] text-muted">
         {isOrganizer ? 'A photo everyone will see when they open Postscript.' : 'Your organizer hasn’t added a photo yet.'}

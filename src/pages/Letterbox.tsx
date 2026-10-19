@@ -195,7 +195,7 @@ function LetterItem({
       note={note}
       urls={[...letter.psPieces, ...letter.pieces].map((p) => p.audioUrl)}
       from="you"
-      thumb={<Avatar name={getMyName()} size={96} />}
+      thumb={letter.photoUrl ? <img src={letter.photoUrl} alt="" className="size-full object-cover" /> : <Avatar name={getMyName()} size={96} />}
       menu={menu}
     >
       {(panel !== 'none' || error) && (
