@@ -1,6 +1,6 @@
 // The body of each release step screen: one question, one list of choices. No pop-ups,
 // no expanders beyond the date field inside "Pick a date".
-import { CalendarDays, Feather, Lock, Send, Users } from 'lucide-react'
+import { CalendarDays, Send, Users } from 'lucide-react'
 import { useState } from 'react'
 import type { ReleaseStep } from '../lib/releaseFlow'
 import { formatDay, todayString } from '../lib/today'
@@ -15,11 +15,10 @@ type StepProps = {
   members: FamilyMember[] // family members other than the storyteller
 }
 
+// Only two choices when recording: older letters saved as "when I am gone" or "only for me" still work.
 const MODES: { mode: ReleaseMode; label: string; hint: string; icon: typeof Send }[] = [
   { mode: 'now', label: 'Now', hint: 'They can hear it right away, once it’s in the book.', icon: Send },
   { mode: 'date', label: 'On a special day', hint: 'Choose a date for it to be released.', icon: CalendarDays },
-  { mode: 'after', label: 'When I am gone', hint: 'Release after I pass away.', icon: Feather },
-  { mode: 'private', label: 'Only for me', hint: 'Keep it private in my book.', icon: Lock },
 ]
 
 export function ReleaseStepOptions(props: StepProps) {

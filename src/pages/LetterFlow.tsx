@@ -72,7 +72,7 @@ function LetterFlow() {
   const [pieceId, setPieceId] = useState<string | null>(null)
   const [transcript, setTranscript] = useState('')
   const [sensitivity, setSensitivity] = useState<Sensitivity | null>(null)
-  const [choice, setChoice] = useState<ReleaseChoice>({ releaseMode: secret ? 'private' : 'now', recipients: 'all' })
+  const [choice, setChoice] = useState<ReleaseChoice>({ releaseMode: 'now', recipients: 'all' })
   const [presets, setPresets] = useState<ReleasePreset[]>([])
   const [mentioned, setMentioned] = useState<Person[]>([])
   const [choices, setChoices] = useState<NameChoice[]>([])
