@@ -345,6 +345,17 @@ export async function listChapters(): Promise<Chapter[]> {
   return (data as ChapterRow[]).map(toChapter)
 }
 
+/** Chapters the current viewer may see in the Family Book: a "Now" letter sent to specific people stays out for everyone else. */
+export async function listVisibleChapters(): Promise<Chapter[]> {
+  const [ctx, letters, chapters] = await Promise.all([store.context(), store.letters(), listChapters()])
+  if (isStoryteller(ctx)) return chapters
+  const byId = new Map(letters.map((l) => [l.id, l]))
+  return chapters.filter((c) => {
+    const letter = c.letterId ? byId.get(c.letterId) : undefined
+    return !letter || (!!ctx.me && isRecipient(letter, ctx.me.id, ctx.members))
+  })
+}
+
 export async function updateChapter(
   id: string,
   changes: Partial<Omit<Chapter, 'id'>>,
@@ -1004,7 +1015,7 @@ async function visibleLetterMemos(): Promise<Memo[]> {
   const approved = new Set(chapters.filter((c) => c.status !== 'hidden').map((c) => c.letterId).filter(Boolean))
   const visible = letters.filter((l) => {
     if (isStoryteller(ctx)) return true
-    if (l.releaseMode === 'now') return approved.has(l.id)
+    if (l.releaseMode === 'now') return approved.has(l.id) && !!ctx.me && isRecipient(l, ctx.me.id, ctx.members)
     return !!ctx.me && !!l.openedAt[ctx.me.id]
   })
   const presented = await Promise.all(visible.map((l) => (isStoryteller(ctx) ? hydrate(l) : presentForReader(l, ctx.people))))
@@ -1177,8 +1188,8 @@ export async function decideRelease(letterId: string, choice: ReleaseChoice, sen
   }
 
   if (choice.releaseMode === 'now') {
-    // "Now" letters go to review, then into the book.
-    updated = { ...updated, status: 'finished', recipients: 'all' }
+    // "Now" letters go to review, then into the book (for everyone, or only the people chosen).
+    updated = { ...updated, status: 'finished' }
     if (!updated.chapterId) {
       const chapter = await store.saveChapter(
         { id: '', title: updated.title, stageId: updated.stageId ?? '', passages: updated.passages, status: 'draft', letterId: updated.id },
@@ -1257,6 +1268,7 @@ export async function getLetter(letterId: string): Promise<LetterAccess> {
 
   const myReplies = () => hydrateReplies(replies.filter((r) => r.letterId === letterId && r.memberId === me.id))
   if (letter.releaseMode === 'now') {
+    if (!isRecipient(letter, me.id, ctx.members)) return { kind: 'hidden' }
     const chapter = (await listChapters()).find((c) => c.id === letter.chapterId)
     if (chapter?.status !== 'approved') return { kind: 'hidden' }
     return { kind: 'reader', letter: await presentForReader(letter, ctx.people), opened: true, replies: await myReplies(), fromName: ctx.storytellerName }

@@ -1,7 +1,7 @@
 import { LoaderCircle, Mic, Square } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-// The big vermilion mic with a soft halo (pulsing while recording) and a serif label under it.
+// The big oxblood mic with a soft halo (pulsing while recording) and a serif label under it.
 // Recording logic stays with the caller; this only shows the state.
 export function RecordButton({
   state = 'idle',
@@ -26,16 +26,16 @@ export function RecordButton({
       aria-pressed={recording}
       className="group mx-auto flex flex-col items-center rounded-[24px] px-4 pb-2 focus-visible:outline-offset-4 disabled:cursor-default"
     >
-      <span className="relative flex size-[172px] items-center justify-center">
+      <span className="relative flex size-[200px] items-center justify-center">
         <span className={`absolute inset-0 rounded-full bg-vermilion/[0.07] ${recording ? 'motion-safe:animate-halo [animation-delay:300ms]' : ''}`} aria-hidden="true" />
-        <span className={`absolute inset-[18px] rounded-full bg-vermilion/[0.11] ${recording ? 'motion-safe:animate-halo' : ''}`} aria-hidden="true" />
-        <span className="relative flex size-[120px] items-center justify-center rounded-full bg-vermilion text-white shadow-mic transition-colors group-hover:bg-vermilion-dark group-disabled:opacity-80">
+        <span className={`absolute inset-[14px] rounded-full bg-vermilion/[0.11] ${recording ? 'motion-safe:animate-halo' : ''}`} aria-hidden="true" />
+        <span className="relative flex size-[160px] items-center justify-center rounded-full bg-oxblood text-white shadow-mic transition-colors group-hover:bg-oxblood-dark group-disabled:opacity-80">
           {state === 'saving' ? (
-            <LoaderCircle size={40} strokeWidth={1.5} className="motion-safe:animate-spin" aria-hidden="true" />
+            <LoaderCircle size={48} strokeWidth={1.5} className="motion-safe:animate-spin" aria-hidden="true" />
           ) : recording ? (
-            <Square size={34} fill="currentColor" strokeWidth={0} aria-hidden="true" />
+            <Square size={40} fill="currentColor" strokeWidth={0} aria-hidden="true" />
           ) : (
-            <Mic size={46} strokeWidth={1.5} aria-hidden="true" />
+            <Mic size={58} strokeWidth={1.5} aria-hidden="true" />
           )}
         </span>
       </span>

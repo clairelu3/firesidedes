@@ -65,6 +65,7 @@ export type Sensitivity = { flagged: boolean; mentalHealth: boolean; matches: st
 export type Letter = {
   id: string
   title: string
+  photoUrl?: string // a photo shown as the letter's card thumbnail (demo seed only for now)
   stageId?: string
   createdAt: string
   status: 'in_progress' | 'finished'

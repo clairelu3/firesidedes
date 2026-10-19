@@ -17,7 +17,7 @@ import { SectionHeader } from '../components/ui/SectionHeader'
 import { STICKY_ACTION_BAR_HEIGHT, StickyActionBar } from '../components/ui/StickyActionBar'
 import { formatMemoDate } from '../lib/format'
 import { openedSummary, recipientNames, releaseSummary } from '../lib/letterText'
-import { isSealing, releaseSentence, releaseSteps, STEP_TITLES, stepProblem, type ReleaseStep } from '../lib/releaseFlow'
+import { choosesRecipients, releaseSentence, releaseSteps, STEP_TITLES, stepProblem, type ReleaseStep } from '../lib/releaseFlow'
 import { useViewer } from '../lib/useViewer'
 import type { FamilyMember, Letter, LetterReply, ReleaseChoice, ReleasePreset } from '../types'
 
@@ -88,7 +88,6 @@ export default function LetterDetail() {
 
   const others = members.filter((m) => m.role !== 'storyteller')
   const opened = Object.keys(letter.openedAt).length > 0
-  const sealed = letter.decided && isSealing(choiceOf(letter))
 
   async function run(action: () => Promise<unknown>, after: () => void) {
     setBusy(true)
@@ -241,7 +240,7 @@ export default function LetterDetail() {
             <SecondaryButton large onClick={() => startEdit('when')}>
               {letter.decided ? 'Change when they hear it' : 'Choose when they hear it'}
             </SecondaryButton>
-            {sealed && (
+            {letter.decided && choosesRecipients(choiceOf(letter)) && (
               <SecondaryButton large onClick={() => startEdit('who')}>
                 Change who it’s for
               </SecondaryButton>

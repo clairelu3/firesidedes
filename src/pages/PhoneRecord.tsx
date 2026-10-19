@@ -1,8 +1,9 @@
 // /r — where the QR code points. One big record button; saving uploads to POST /api/memos,
 // which transcribes (Whisper), tags, and places the memo on the timeline.
 import { useMemo, useState } from 'react'
-import { AppShell, TAGLINE } from '../components/ui/AppShell'
+import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
+import { Avatar } from '../components/ui/Avatar'
 import { PrimaryButton, SecondaryButton } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Notice } from '../components/ui/Notice'
@@ -51,7 +52,7 @@ export default function PhoneRecord() {
   const tags = result?.tags
 
   return (
-    <AppShell hero="hero-grandma" menu={false} right={<span />} subtitle={TAGLINE}>
+    <AppShell hero="hero-grandma" menu={false} right={<span />}>
       <PageHeader title="Tell one memory" subtitle="Any language. A minute or two is plenty." />
 
       {(phase === 'idle' || phase === 'saving') && (
@@ -68,7 +69,7 @@ export default function PhoneRecord() {
 
       {phase === 'review' && rec.audio && (
         <div className="space-y-4">
-          <AudioCard title="Your memory" meta="Just now" audioUrl={audioUrl} thumb="house-tainan" />
+          <AudioCard title="Your memory" meta="Just now" from="you" audioUrl={audioUrl} thumb={<Avatar name={null} size={96} />} />
           <div className="flex gap-3">
             <SecondaryButton onClick={again}>Redo</SecondaryButton>
             <PrimaryButton onClick={save}>Save</PrimaryButton>

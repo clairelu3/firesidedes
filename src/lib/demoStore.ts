@@ -18,7 +18,7 @@ export type DemoState = {
 }
 
 const STATE_KEY = 'postscript-demo'
-const VERSION = 1
+const VERSION = 2 // bump when the seed changes, so stored demo data is replaced
 
 function seed(): DemoState {
   // structuredClone so edits never touch the seed constants.

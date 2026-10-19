@@ -16,7 +16,6 @@ import {
   findMentionedPeople,
   finishLetter,
   forgetPiece,
-  getLifeMap,
   getReleasePresets,
   listMyLetters,
   setNameChoices as saveNameChoices,
@@ -24,8 +23,9 @@ import {
 } from '../api'
 import { MiniRecorder } from '../components/MiniRecorder'
 import { ReleaseStepOptions } from '../components/ReleaseSteps'
-import { AppShell, TAGLINE } from '../components/ui/AppShell'
+import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
+import { Avatar } from '../components/ui/Avatar'
 import { PrimaryButton, SecondaryButton } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { TextArea } from '../components/ui/Field'
@@ -36,12 +36,11 @@ import { RecordButton } from '../components/ui/RecordButton'
 import { Segmented } from '../components/ui/Segmented'
 import { STICKY_ACTION_BAR_HEIGHT, StickyActionBar } from '../components/ui/StickyActionBar'
 import { formatDuration } from '../lib/format'
-import { thumbFor } from '../lib/illustrations'
 import { PS_PROMPT_LABEL, recipientNames, releaseSummary } from '../lib/letterText'
 import { isSealing, releaseActionLabel, releaseSentence, releaseSteps, STEP_TITLES, stepProblem, type ReleaseStep } from '../lib/releaseFlow'
 import { useLetterRecorder } from '../lib/useLetterRecorder'
 import { useViewer } from '../lib/useViewer'
-import type { Letter, LifeStage, NameChoice, Person, ReleaseChoice, ReleasePreset, Sensitivity } from '../types'
+import type { Letter, NameChoice, Person, ReleaseChoice, ReleasePreset, Sensitivity } from '../types'
 
 type FlowStep = 'record' | ReleaseStep | 'ps' | 'people' | 'confirm'
 type Screen = FlowStep | 'saving' | 'transcript' | 'done' | 'added'
@@ -66,7 +65,6 @@ function LetterFlow() {
   const viewer = useViewer()
 
   const [addTo, setAddTo] = useState<Letter | null>(null)
-  const [stages, setStages] = useState<LifeStage[]>([])
   const [lang, setLang] = useState<string>('en-US')
   const rec = useLetterRecorder(lang)
   const [screen, setScreen] = useState<Screen>('record')
@@ -83,9 +81,6 @@ function LetterFlow() {
 
   useEffect(() => {
     getReleasePresets().then(setPresets).catch((err) => console.error(err))
-    getLifeMap()
-      .then((map) => setStages(map?.stages ?? []))
-      .catch((err) => console.error(err))
     if (addId) {
       listMyLetters()
         .then(({ letters }) => setAddTo(letters.find((l) => l.id === addId) ?? null))
@@ -249,7 +244,15 @@ function LetterFlow() {
   }
 
   const errorBox = error && <Notice tone="error">{error}</Notice>
-  const letterCard = letter && <AudioCard title={letter.title} meta="Just now" urls={letter.pieces.map((p) => p.audioUrl)} thumb={thumbFor(letter.stageId, stages)} />
+  const letterCard = letter && (
+    <AudioCard
+      title={letter.title}
+      meta="Just now"
+      from={viewer ? `${viewer.storytellerName} (you)` : 'you'}
+      urls={letter.pieces.map((p) => p.audioUrl)}
+      thumb={<Avatar name={viewer?.storytellerName ?? null} size={96} />}
+    />
+  )
 
   // One full-screen step: header with "‹ Back" and "Step n of N", content, big Back / Continue.
   const stepShell = (content: ReactNode, { continueLabel = 'Continue', onContinue = goNext, hero = false }: { continueLabel?: string; onContinue?: () => void; hero?: boolean } = {}) => (
@@ -274,9 +277,9 @@ function LetterFlow() {
       ? `Adding part ${addTo.pieces.length + 1} to “${addTo.title}”.`
       : secret
         ? 'It starts sealed. You decide who hears it, and when.'
-        : 'A place, a person, a taste, a moment. Your voice keeps it alive.'
+        : 'A place, a person, a taste, a moment.'
     return (
-      <AppShell hero="hero-grandma" back="/letterbox" labeledBack step={addTo ? undefined : `Step 1 of ${flow.length}`} subtitle={TAGLINE}>
+      <AppShell hero="hero-grandma" back="/letterbox" labeledBack step={addTo ? undefined : `Step 1 of ${flow.length}`}>
         <PageHeader title={title} subtitle={subtitle} />
         {letter && screen === 'record' && !recording ? (
           // Came back from step 2: the recording is safe. Continue, or start over.

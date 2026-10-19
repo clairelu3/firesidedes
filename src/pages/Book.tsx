@@ -3,7 +3,7 @@
 import { Search, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { getLetterShelf, getLifeMap, listChapters, listMemos, type LetterShelf } from '../api'
+import { getLetterShelf, getLifeMap, listMemos, listVisibleChapters, type LetterShelf } from '../api'
 import { EnvelopeSheet, LetterInfoSheet } from '../components/FamilySheets'
 import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
@@ -11,11 +11,12 @@ import { Card } from '../components/ui/Card'
 import { ChapterHeader } from '../components/ui/ChapterHeader'
 import { EnvelopeCard } from '../components/ui/EnvelopeCard'
 import { HeaderIconButton } from '../components/ui/AppHeader'
-import { Illustration } from '../components/ui/Illustration'
+import { HouseBackdrop } from '../components/ui/HouseBackdrop'
 import { PillInput } from '../components/ui/OptionList'
 import { SignatureLine } from '../components/ui/SignatureLine'
-import { cjkName, sealFor, thumbFor } from '../lib/illustrations'
+import { cjkName, sealFor } from '../lib/illustrations'
 import { useIsStoryteller } from '../lib/useViewer'
+import { Avatar } from '../components/ui/Avatar'
 import type { Chapter, Envelope, LifeStage, Memo } from '../types'
 
 type Part = { number: number; stage?: LifeStage; chapters: Chapter[]; envelopes: Envelope[] }
@@ -54,7 +55,7 @@ export default function Book() {
   const [query, setQuery] = useState('')
 
   useEffect(() => {
-    Promise.all([listChapters(), getLifeMap(), listMemos(), getLetterShelf()])
+    Promise.all([listVisibleChapters(), getLifeMap(), listMemos(), getLetterShelf()])
       .then(([chapters, map, m, letterShelf]) => {
         // Letters this reader has opened become normal pages in the book.
         const approved = [...chapters.filter((c) => c.status === 'approved'), ...letterShelf.openedChapters]
@@ -102,7 +103,6 @@ export default function Book() {
 
       {parts !== null && shown.length === 0 && forToday.length === 0 && (
         <Card className="mt-4 overflow-hidden px-6 py-10 text-center">
-          <Illustration slot="mango-branch" fallback="mango" fit="contain" className="mx-auto h-24 w-36" />
           <h1 className="text-title mt-4">{q ? 'Nothing found' : 'The book is still being written'}</h1>
           <p className="text-body mx-auto mt-3 max-w-[280px] text-muted">
             {q ? 'Try another word.' : 'Your family’s book will appear here once letters are approved.'}
@@ -118,8 +118,9 @@ export default function Book() {
         </div>
       )}
 
+      {shown.length > 0 && <HouseBackdrop className="top-28 -right-16 w-[280px] opacity-45" />}
       {shown.map((part) => (
-        <section key={part.number} className="pb-4">
+        <section key={part.number} className="relative pb-4">
           <ChapterHeader
             number={part.number}
             title={part.stage?.label || 'More letters'}
@@ -137,7 +138,8 @@ export default function Book() {
                   title={chapter.title}
                   meta={dayLabel(recs[0]?.createdAt)}
                   urls={recs.map((m) => m.audioUrl)}
-                  thumb={thumbFor(chapter.stageId, stages)}
+                  from={fromName || undefined}
+                  thumb={<Avatar name={fromName} size={96} />}
                   onTitleClick={openDetails}
                   onMore={openDetails}
                 />
@@ -158,7 +160,6 @@ export default function Book() {
 
       {parts !== null && (
         <footer className="relative mt-8 flex min-h-28 items-end">
-          <Illustration slot="mango-branch" fallback="mango" fit="contain" className="pointer-events-none absolute -bottom-6 -left-4 h-28 w-40" />
           <SignatureLine className="relative ml-auto" seal={signature} />
         </footer>
       )}

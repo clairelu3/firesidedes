@@ -8,10 +8,13 @@ export type ReleaseStep = 'when' | 'who' | 'day' | 'keeper'
 
 export const isSealing = (c: ReleaseChoice) => c.releaseMode === 'date' || c.releaseMode === 'after'
 
-// Steps that apply to this choice, in order. "Now" and "Only for me" need nothing more.
+// Every letter except "Only for me" can go to the whole family or to chosen people.
+export const choosesRecipients = (c: ReleaseChoice) => c.releaseMode !== 'private'
+
+// Steps that apply to this choice, in order. "Only for me" needs nothing more.
 export function releaseSteps(choice: ReleaseChoice): ReleaseStep[] {
   const steps: ReleaseStep[] = ['when']
-  if (isSealing(choice)) steps.push('who')
+  if (choosesRecipients(choice)) steps.push('who')
   if (choice.releaseMode === 'date') steps.push('day')
   if (choice.releaseMode === 'after') steps.push('keeper')
   return steps
@@ -31,7 +34,9 @@ export function releaseSentence(choice: ReleaseChoice, members: FamilyMember[]):
   const names = recipientNames(choice.recipients, members)
   switch (choice.releaseMode) {
     case 'now':
-      return 'It goes to the family book. Your family can read it once it’s approved.'
+      return choice.recipients === 'all'
+        ? 'It goes to the family book. Your family can read it once it’s approved.'
+        : `It goes to the family book, only for ${names}. They can read it once it’s approved.`
     case 'private':
       return 'Only for you. No one else can hear it until you decide.'
     case 'date':
@@ -49,7 +54,7 @@ export function releaseActionLabel(choice: ReleaseChoice): string {
 
 export const STEP_TITLES: Record<ReleaseStep, { title: string; subtitle: string }> = {
   when: { title: 'When should they hear it?', subtitle: 'You can choose who can hear this memory and when to release it.' },
-  who: { title: 'Who is it for?', subtitle: 'Only they will hear it. Everyone else only sees that you left a letter.' },
+  who: { title: 'Who is it for?', subtitle: 'The whole family, or only the people you choose. No one else will hear it.' },
   day: { title: 'Which day?', subtitle: 'It stays sealed until this day.' },
   keeper: { title: 'Who keeps it?', subtitle: 'Only this person can open it for the family, when the time comes.' },
 }

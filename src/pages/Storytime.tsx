@@ -6,6 +6,7 @@ import { useParams } from 'react-router'
 import { listMemos, makeStoryMovie, makeStorybook } from '../api'
 import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
+import { Avatar } from '../components/ui/Avatar'
 import { IconButton, PrimaryButton, TextButton } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Notice } from '../components/ui/Notice'
@@ -189,7 +190,7 @@ export default function Storytime() {
         </>
       )}
 
-      {memo?.audioUrl && <AudioCard className="mt-6" title="Hear Grandma tell it" meta="Her real recording of this memory" audioUrl={memo.audioUrl} thumb="house-tainan" />}
+      {memo?.audioUrl && <AudioCard className="mt-6" title="Hear Grandma tell it" meta="Her real recording of this memory" audioUrl={memo.audioUrl} from="Grandma" thumb={<Avatar name="Grandma" size={96} />} />}
     </AppShell>
   )
 }

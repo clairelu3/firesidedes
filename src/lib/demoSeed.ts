@@ -4,7 +4,7 @@ import type { Chapter, Family, FamilyMember, Letter, LetterPiece, LetterReply, L
 
 export const DEMO_FAMILY_CODE = 'lin'
 
-export const seedFamily: Family = { code: DEMO_FAMILY_CODE, name: 'Lin Family', createdAt: '2026-08-20T18:00:00Z' }
+export const seedFamily: Family = { code: DEMO_FAMILY_CODE, name: 'Lin Family', photoUrl: '/demo/photos/family-cover.jpg', createdAt: '2026-08-20T18:00:00Z' }
 
 export const seedMembers: FamilyMember[] = [
   { id: 'm-ama', familyCode: DEMO_FAMILY_CODE, name: 'Ama', role: 'storyteller', relationship: 'Grandmother · 林秀英', createdAt: '2026-08-20T18:00:00Z' },
@@ -97,6 +97,7 @@ export const seedLetters: Letter[] = [
   letter({
     id: 'l-lily18',
     title: 'The year I could not get out of bed',
+    photoUrl: '/demo/photos/birthday-cake.jpg',
     stageId: 's-2',
     createdAt: '2026-09-30T19:10:00Z',
     origin: 'secret',
@@ -117,6 +118,7 @@ export const seedLetters: Letter[] = [
   letter({
     id: 'l-after',
     title: 'The night they took my father',
+    photoUrl: '/demo/photos/kitchen.jpg',
     stageId: 's-1',
     createdAt: '2026-10-05T18:00:00Z',
     origin: 'secret',
@@ -135,6 +137,7 @@ export const seedLetters: Letter[] = [
   letter({
     id: 'l-private',
     title: 'The restaurant money',
+    photoUrl: '/demo/photos/roast-pork.jpg',
     stageId: 's-3',
     createdAt: '2026-10-12T20:00:00Z',
     origin: 'secret',

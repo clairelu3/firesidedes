@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { getLifeMap, getMyName, LIFE_MAP_REPLACES_ON_SAVE, saveLifeMap } from '../api'
 import { AppShell } from '../components/ui/AppShell'
+import { HouseBackdrop } from '../components/ui/HouseBackdrop'
 import { Avatar } from '../components/ui/Avatar'
 import { IconButton, TextButton } from '../components/ui/Button'
 import { Card, TitledCard } from '../components/ui/Card'
@@ -128,8 +129,9 @@ export default function Life() {
         progress={step / 3}
       />
 
+      {step === 1 && <HouseBackdrop className="top-[566px] -right-6 w-[230px] opacity-50" />}
       {step === 1 && (
-        <TitledCard step={1} title="About you" subtitle="Just the basics, so your stories start in the right place.">
+        <TitledCard step={1} title="About you">
           <div className="space-y-5">
             <Field label="Your name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
             <Field

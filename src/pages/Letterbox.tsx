@@ -2,8 +2,8 @@
 // hear replies, and manage her letters. Only she can see or change these (checked in api.ts).
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { getLifeMap, getViewer, listMyLetters, type Viewer } from '../api'
-import { AppShell, TAGLINE } from '../components/ui/AppShell'
+import { getMyName, getViewer, listMyLetters, type Viewer } from '../api'
+import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
 import { Avatar } from '../components/ui/Avatar'
 import { PrimaryButton, SecondaryButton } from '../components/ui/Button'
@@ -13,9 +13,8 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { RecordButton } from '../components/ui/RecordButton'
 import { SectionHeader } from '../components/ui/SectionHeader'
 import { formatMemoDate } from '../lib/format'
-import { thumbFor } from '../lib/illustrations'
 import { openedSummary, releaseSummary } from '../lib/letterText'
-import type { FamilyMember, Letter, LetterReply, LifeStage } from '../types'
+import type { FamilyMember, Letter, LetterReply } from '../types'
 
 type Data = { letters: Letter[]; replies: LetterReply[]; members: FamilyMember[] }
 
@@ -32,7 +31,6 @@ export default function Letterbox() {
   const navigate = useNavigate()
   const [viewer, setViewer] = useState<Viewer | null>(null)
   const [data, setData] = useState<Data | null>(null)
-  const [stages, setStages] = useState<LifeStage[]>([])
   const [showAll, setShowAll] = useState(false)
   const [error, setError] = useState(false)
 
@@ -40,9 +38,8 @@ export default function Letterbox() {
     const v = await getViewer()
     setViewer(v)
     if (!v.isStoryteller) return
-    const [d, map] = await Promise.all([listMyLetters(), getLifeMap()])
+    const d = await listMyLetters()
     setData(d)
-    setStages(map?.stages ?? [])
   }
 
   useEffect(() => {
@@ -54,7 +51,7 @@ export default function Letterbox() {
 
   if (viewer && !viewer.isStoryteller) {
     return (
-      <AppShell subtitle={TAGLINE}>
+      <AppShell>
         <PageHeader title={`${viewer.storytellerName}’s letterbox`} subtitle={`Only ${viewer.storytellerName} can open her letterbox. Letters she shares are in the family book.`} />
         <PrimaryButton onClick={() => navigate('/book')}>Open the family book</PrimaryButton>
       </AppShell>
@@ -65,8 +62,8 @@ export default function Letterbox() {
   const letters = data?.letters ?? []
 
   return (
-    <AppShell hero="hero-grandma" subtitle={TAGLINE}>
-      <PageHeader title="What do you remember?" subtitle="A place, a person, a taste, a moment. Your voice keeps it alive." />
+    <AppShell hero="hero-grandma">
+      <PageHeader title="What do you remember?" subtitle="A place, a person, a taste, a moment." />
 
       <RecordButton onClick={() => navigate('/record?start=1')} />
       <div className="mt-1 text-center">
@@ -112,7 +109,7 @@ export default function Letterbox() {
                   <p className="text-eyebrow mb-3">{g.title}</p>
                   <div className="space-y-4">
                     {inGroup.map((l) => (
-                      <LetterItem key={l.id} letter={l} stages={stages} members={data.members}/>
+                      <LetterItem key={l.id} letter={l} members={data.members} />
                     ))}
                   </div>
                 </div>
@@ -121,7 +118,7 @@ export default function Letterbox() {
           ) : (
             <div className="space-y-4">
               {letters.slice(0, RECENT).map((l) => (
-                <LetterItem key={l.id} letter={l} stages={stages} members={data.members}/>
+                <LetterItem key={l.id} letter={l} members={data.members} />
               ))}
             </div>
           )}
@@ -133,7 +130,7 @@ export default function Letterbox() {
 }
 
 // One of her letters: listen right here, or open it (full screen) to change or release it.
-function LetterItem({ letter, stages, members }: { letter: Letter; stages: LifeStage[]; members: FamilyMember[] }) {
+function LetterItem({ letter, members }: { letter: Letter; members: FamilyMember[] }) {
   const navigate = useNavigate()
   const note = [
     letter.status === 'in_progress' ? 'In progress' : null,
@@ -146,7 +143,7 @@ function LetterItem({ letter, stages, members }: { letter: Letter; stages: LifeS
     .join(' · ')
 
   return (
-    <AudioCard title={letter.title} meta={formatMemoDate(letter.createdAt)} note={note} urls={[...letter.psPieces, ...letter.pieces].map((p) => p.audioUrl)} thumb={thumbFor(letter.stageId, stages)}>
+    <AudioCard title={letter.title} meta={formatMemoDate(letter.createdAt)} note={note} urls={[...letter.psPieces, ...letter.pieces].map((p) => p.audioUrl)} from="you" thumb={letter.photoUrl ? <img src={letter.photoUrl} alt="" className="size-full object-cover" /> : <Avatar name={getMyName()} size={96} />}>
       <SecondaryButton large onClick={() => navigate(`/letterbox/${letter.id}`)}>
         Open this letter
       </SecondaryButton>

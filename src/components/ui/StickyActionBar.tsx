@@ -25,7 +25,7 @@ export function StickyActionBar({
           {backLabel}
         </SecondaryButton>
       )}
-      <PrimaryButton large danger={danger} onClick={onContinue} disabled={continueDisabled}>
+      <PrimaryButton large danger={danger} onClick={onContinue} disabled={continueDisabled} className="whitespace-nowrap">
         {continueLabel}
       </PrimaryButton>
     </div>

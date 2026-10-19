@@ -7,6 +7,7 @@ type Props = {
   slot: IllustrationSlot
   className?: string
   fit?: 'cover' | 'contain'
+  position?: 'center' | 'bottom'
   // 'blob' for scenes, 'leaves'/'mango' for transparent overlays, 'none' to show nothing.
   fallback?: 'blob' | 'leaves' | 'mango' | 'none'
   showLabel?: boolean
@@ -14,7 +15,7 @@ type Props = {
   alt?: string
 }
 
-export function Illustration({ slot, className = '', fit = 'cover', fallback = 'blob', showLabel = false, flip = false, alt = '' }: Props) {
+export function Illustration({ slot, className = '', fit = 'cover', position = 'center', fallback = 'blob', showLabel = false, flip = false, alt = '' }: Props) {
   const [state, setState] = useState<'loading' | 'loaded' | 'missing'>('loading')
   return (
     <div className={`overflow-hidden ${/\b(absolute|fixed)\b/.test(className) ? '' : 'relative'} ${className}`}>
@@ -26,7 +27,7 @@ export function Illustration({ slot, className = '', fit = 'cover', fallback = '
           alt={alt}
           onLoad={() => setState('loaded')}
           onError={() => setState('missing')}
-          className={`absolute inset-0 size-full ${fit === 'cover' ? 'object-cover' : 'object-contain'} ${state === 'loaded' ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+          className={`absolute inset-0 size-full ${fit === 'cover' ? 'object-cover' : 'object-contain'} ${position === 'bottom' ? 'object-bottom' : ''} ${state === 'loaded' ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
         />
       )}
     </div>

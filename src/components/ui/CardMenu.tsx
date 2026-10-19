@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 export type MenuItem = { label: string; onSelect: () => void; danger?: boolean }
 
 // The vertical "⋮" at a card's top right, opening a small list of actions.
-export function CardMenu({ items, label = 'More options', className = '' }: { items: MenuItem[]; label?: string; className?: string }) {
+export function CardMenu({ items, label = 'More options', className = '', tone = 'ink' }: { items: MenuItem[]; label?: string; className?: string; tone?: 'ink' | 'seal' }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -34,7 +34,7 @@ export function CardMenu({ items, label = 'More options', className = '' }: { it
         aria-label={label}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex size-9 items-center justify-center rounded-full text-ink/70 hover:bg-ink/5"
+        className={`flex size-9 items-center justify-center rounded-full hover:bg-ink/5 ${tone === 'seal' ? 'text-vermilion' : 'text-ink/70'}`}
       >
         <MoreVertical size={18} strokeWidth={1.75} aria-hidden="true" />
       </button>

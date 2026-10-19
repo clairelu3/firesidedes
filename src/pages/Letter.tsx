@@ -20,7 +20,7 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { SectionHeader } from '../components/ui/SectionHeader'
 import { SignatureLine } from '../components/ui/SignatureLine'
 import { DropCapParagraph } from '../components/ui/story'
-import { cjkName, sealFor, thumbFor } from '../lib/illustrations'
+import { cjkName, sealFor } from '../lib/illustrations'
 import { PS_PROMPT_LABEL, releaseSummary } from '../lib/letterText'
 import { publicBaseUrl } from '../lib/qrApi'
 import type { FamilyMember, Letter, LetterAccess, LetterReply, LifeStage } from '../types'
@@ -137,7 +137,7 @@ export default function LetterPage() {
     return (
       <AppShell back={`/letterbox/${letter.id}`} labeledBack>
         <LetterTitle eyebrow="Your letter" title={letter.title} sub={releaseSummary(letter, members)} seal={sealFor(stages.find((s) => s.id === letter.stageId))} />
-        <LetterBody letter={letter} fromName="you" stages={stages} />
+        <LetterBody letter={letter} fromName="you" />
         <Replies replies={replies} title="Replies" />
         <SignatureLine className="mt-10" seal={signature} />
       </AppShell>
@@ -222,7 +222,7 @@ export default function LetterPage() {
           Details
         </SecondaryButton>
       </div>
-      <LetterBody letter={letter} fromName={fromName} stages={stages} showPs={false} />
+      <LetterBody letter={letter} fromName={fromName} showPs={false} />
 
       {letter.sensitive.mentalHealth && (
         <p className="text-meta mt-10 border-t border-hairline pt-6 text-[14.5px] leading-[1.6]">
@@ -292,9 +292,9 @@ function LetterTitle({ eyebrow, title, sub, seal }: { eyebrow: string; title: st
 }
 
 // P.S. first, then each passage with the recording it came from underneath.
-function LetterBody({ letter, fromName, stages, showPs = true }: { letter: Letter; fromName: string; stages: LifeStage[]; showPs?: boolean }) {
+function LetterBody({ letter, fromName, showPs = true }: { letter: Letter; fromName: string; showPs?: boolean }) {
   const pieceOf = (memoId: string) => letter.pieces.find((p) => p.id === memoId)
-  const thumb = thumbFor(letter.stageId, stages)
+  const thumb = <Avatar name={fromName === 'you' ? null : fromName} size={96} />
   return (
     <div className="space-y-6">
       {showPs && letter.psPieces.length > 0 && (
@@ -316,6 +316,7 @@ function LetterBody({ letter, fromName, stages, showPs = true }: { letter: Lette
               <AudioCard
                 title={fromName === 'you' ? 'Hear yourself tell it' : `Hear ${fromName} tell it`}
                 meta={letter.pieces.length > 1 ? `Part ${part} of ${letter.pieces.length}` : undefined}
+                from={fromName}
                 audioUrl={piece.audioUrl}
                 thumb={thumb}
               />
