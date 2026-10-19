@@ -18,7 +18,7 @@ export function StickyActionBar({
       <SecondaryButton onClick={onBack} className="w-[32%]">
         Back
       </SecondaryButton>
-      <PrimaryButton onClick={onContinue} disabled={continueDisabled} className="flex-1">
+      <PrimaryButton onClick={onContinue} disabled={continueDisabled} className="flex-1 whitespace-nowrap">
         {continueLabel}
       </PrimaryButton>
     </div>

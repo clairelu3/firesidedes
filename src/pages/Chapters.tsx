@@ -7,12 +7,12 @@ import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/But
 import { Card } from '../components/ui/Card'
 import { ChopSeal } from '../components/ui/ChopSeal'
 import { TextArea } from '../components/ui/Field'
-import { Illustration } from '../components/ui/Illustration'
+import { Avatar } from '../components/ui/Avatar'
 import { Notice } from '../components/ui/Notice'
 import { Pager } from '../components/ui/Pager'
 import { Divider, StoryPassages } from '../components/ui/story'
 import { firstName, readMinutes, startYear } from '../lib/format'
-import { sealFor, thumbFor } from '../lib/illustrations'
+import { sealFor } from '../lib/illustrations'
 import type { Chapter, LifeStage, Memo } from '../types'
 
 const REVIEW_PANEL_HEIGHT = 128
@@ -62,7 +62,6 @@ export default function Chapters() {
     return (
       <AppShell subtitle="Review">
         <Card className="mt-4 overflow-hidden px-6 py-10 text-center">
-          <Illustration slot="mango-branch" fallback="mango" fit="contain" className="mx-auto h-24 w-36" />
           <h1 className="text-title mt-4">No chapters to review yet.</h1>
           <p className="text-body mx-auto mt-3 max-w-[300px] text-muted">
             {error ? 'We couldn’t load your chapters. Check your connection and refresh.' : 'Keep recording. Postscript will write your first chapter soon.'}
@@ -192,7 +191,7 @@ export default function Chapters() {
         )}
 
         {audioUrls.length > 0 && (
-          <AudioCard className="mt-7" title={first ? `Hear ${first} tell it` : 'Hear the original recording'} urls={audioUrls} thumb={thumbFor(chapter.stageId, stages)} />
+          <AudioCard className="mt-7" title={first ? `Hear ${first} tell it` : 'Hear the original recording'} urls={audioUrls} from={first || undefined} thumb={<Avatar name={name} size={96} />} />
         )}
       </article>
 

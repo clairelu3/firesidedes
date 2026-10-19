@@ -1,6 +1,6 @@
 // "When should they hear it?" — who it's for (RecipientRow) and when (OptionList).
 // Used after every recording and when changing a letter later.
-import { CalendarDays, Feather, Lock, Send } from 'lucide-react'
+import { CalendarDays, Send } from 'lucide-react'
 import { useState } from 'react'
 import { formatDay, todayString } from '../lib/today'
 import type { FamilyMember, ReleaseChoice, ReleaseMode, ReleasePreset } from '../types'
@@ -18,15 +18,12 @@ type Props = {
 const MODES: { mode: ReleaseMode; label: string; hint: string; icon: typeof Send }[] = [
   { mode: 'now', label: 'Now', hint: 'They can hear it right away, once it’s in the book.', icon: Send },
   { mode: 'date', label: 'On a special day', hint: 'Choose a date for it to be released.', icon: CalendarDays },
-  { mode: 'after', label: 'When I am gone', hint: 'Release after I pass away.', icon: Feather },
-  { mode: 'private', label: 'Only for me', hint: 'Keep it private in my book.', icon: Lock },
 ]
 
 export function releaseChoiceError(choice: ReleaseChoice): string | null {
   if (choice.releaseMode === 'date' && !choice.releaseAt) return 'Choose the day it opens.'
   if (choice.releaseMode === 'date' && choice.releaseAt && choice.releaseAt < todayString()) return 'Choose a day in the future.'
-  if (choice.releaseMode === 'after' && !choice.keeperId) return 'Choose who keeps it.'
-  if ((choice.releaseMode === 'date' || choice.releaseMode === 'after') && choice.recipients !== 'all' && choice.recipients.length === 0) return 'Choose who it’s for.'
+  if (choice.recipients !== 'all' && choice.recipients.length === 0) return 'Choose who it’s for.'
   return null
 }
 
@@ -39,7 +36,6 @@ const myRelation = (m: FamilyMember | undefined) => {
 export function ReleasePicker({ value, onChange, presets, members, storytellerName }: Props) {
   const [choosingWho, setChoosingWho] = useState(false)
   const [choosingDay, setChoosingDay] = useState(false)
-  const sealing = value.releaseMode === 'date' || value.releaseMode === 'after'
   const chosen = value.recipients === 'all' ? [] : members.filter((m) => (value.recipients as string[]).includes(m.id))
   const preset = presets.find((p) => p.date === value.releaseAt)
 
@@ -48,19 +44,19 @@ export function ReleasePicker({ value, onChange, presets, members, storytellerNa
     onChange({ ...value, recipients: current.includes(id) ? current.filter((r) => r !== id) : [...current, id] })
   }
 
-  // Who it's for, as one row. Only sealed letters pick specific people.
-  const recipientRow = !sealing ? (
-    value.releaseMode === 'private' ? (
-      <RecipientRow name={storytellerName} title="Just for you" subtitle="No one else can hear it" />
-    ) : (
-      <RecipientRow name="" group title="For the whole family" subtitle="Everyone in your family book" />
-    )
-  ) : (
+  // Who it's for, as one row that opens the chooser below it.
+  const recipientRow = (
     <RecipientRow
       name={chosen.length === 1 ? chosen[0]!.name : ''}
       group={chosen.length !== 1}
       title={value.recipients === 'all' ? 'For the whole family' : chosen.length ? `For ${chosen.map((m) => m.name).join(', ')}` : 'Choose who it’s for'}
-      subtitle={chosen.length === 1 ? myRelation(chosen[0]) : `Only they will hear it. Others see that ${storytellerName} left a letter, nothing more.`}
+      subtitle={
+        value.recipients === 'all'
+          ? 'Everyone in your family book'
+          : chosen.length === 1
+            ? myRelation(chosen[0])
+            : `Only they will hear it. Others see that ${storytellerName} left a letter, nothing more.`
+      }
       onClick={() => setChoosingWho((v) => !v)}
       expanded={choosingWho}
     />
@@ -69,7 +65,7 @@ export function ReleasePicker({ value, onChange, presets, members, storytellerNa
   return (
     <div>
       {recipientRow}
-      {sealing && choosingWho && (
+      {choosingWho && (
         <OptionList label="Who is it for" className="border-b border-hairline py-2">
           <OptionRow type="check" compact selected={value.recipients === 'all'} onSelect={() => onChange({ ...value, recipients: value.recipients === 'all' ? [] : 'all' })} title="The whole family" />
           {members.map((m) => (
@@ -117,14 +113,6 @@ export function ReleasePicker({ value, onChange, presets, members, storytellerNa
                     </label>
                   </div>
                 )}
-              </div>
-            )}
-            {mode === 'after' && (
-              <div className="rounded-[12px] bg-card p-1.5">
-                <p className="text-meta px-3 pt-2 pb-1">Who keeps it? Only they can open it for the family.</p>
-                {members.map((m) => (
-                  <OptionRow key={m.id} compact selected={value.keeperId === m.id} onSelect={() => onChange({ ...value, keeperId: m.id })} title={m.name} subtitle={m.relationship} />
-                ))}
               </div>
             )}
           </OptionRow>

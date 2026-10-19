@@ -10,6 +10,7 @@ import { Illustration } from './Illustration'
 type Props = {
   title: ReactNode
   meta?: string // e.g. "Feb 14, 2025"; the length is added once known
+  from?: string // who recorded it, shown as "From Ama"
   audioUrl?: string
   urls?: string[]
   thumb?: IllustrationSlot | ReactNode | null // null = no thumbnail
@@ -22,7 +23,7 @@ type Props = {
   className?: string
 }
 
-export function AudioCard({ title, meta, audioUrl, urls, thumb, menu = [], note, onTitleClick, autoPlay = false, onFinished, children, className = '' }: Props) {
+export function AudioCard({ title, meta, from, audioUrl, urls, thumb, menu = [], note, onTitleClick, autoPlay = false, onFinished, children, className = '' }: Props) {
   // Keyed by the URLs themselves, so a parent re-render with a new array doesn't restart playback.
   const tracksKey = (urls ?? [audioUrl ?? '']).filter(Boolean).join('\n')
   const tracks = useMemo(() => (tracksKey ? tracksKey.split('\n') : []), [tracksKey])
@@ -49,6 +50,7 @@ export function AudioCard({ title, meta, audioUrl, urls, thumb, menu = [], note,
                 title
               )}
             </h3>
+            {from && <p className="mt-0.5 font-serif text-[14px] text-pine">From {from}</p>}
             {(meta || length) && <p className="text-meta mt-0.5">{[meta, length].filter(Boolean).join('  ·  ')}</p>}
             {note && <p className="text-meta mt-0.5">{note}</p>}
           </div>

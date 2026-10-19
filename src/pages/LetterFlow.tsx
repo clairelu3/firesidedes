@@ -14,7 +14,6 @@ import {
   findMentionedPeople,
   finishLetter,
   forgetPiece,
-  getLifeMap,
   getReleasePresets,
   getViewer,
   listMyLetters,
@@ -26,6 +25,7 @@ import { MiniRecorder } from '../components/MiniRecorder'
 import { ReleasePicker, releaseChoiceError } from '../components/ReleasePicker'
 import { AppShell, TAGLINE } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
+import { Avatar } from '../components/ui/Avatar'
 import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { TextArea } from '../components/ui/Field'
@@ -35,10 +35,9 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { RecordButton } from '../components/ui/RecordButton'
 import { Segmented } from '../components/ui/Segmented'
 import { formatDuration } from '../lib/format'
-import { thumbFor } from '../lib/illustrations'
 import { PS_PROMPT_LABEL, recipientNames, releaseSummary } from '../lib/letterText'
 import { useLetterRecorder } from '../lib/useLetterRecorder'
-import type { Letter, LifeStage, NameChoice, Person, ReleaseChoice, ReleasePreset, Sensitivity } from '../types'
+import type { Letter, NameChoice, Person, ReleaseChoice, ReleasePreset, Sensitivity } from '../types'
 
 type Step = 'record' | 'saving' | 'release' | 'people' | 'ps' | 'done' | 'added'
 
@@ -62,7 +61,6 @@ function LetterFlow() {
 
   const [viewer, setViewer] = useState<Viewer | null>(null)
   const [addTo, setAddTo] = useState<Letter | null>(null)
-  const [stages, setStages] = useState<LifeStage[]>([])
   const [lang, setLang] = useState<string>('en-US')
   const rec = useLetterRecorder(lang)
   const [step, setStep] = useState<Step>('record')
@@ -71,7 +69,7 @@ function LetterFlow() {
   const [transcript, setTranscript] = useState('')
   const [savedTranscript, setSavedTranscript] = useState('')
   const [sensitivity, setSensitivity] = useState<Sensitivity | null>(null)
-  const [choice, setChoice] = useState<ReleaseChoice>({ releaseMode: secret ? 'private' : 'now', recipients: 'all' })
+  const [choice, setChoice] = useState<ReleaseChoice>({ releaseMode: 'now', recipients: 'all' })
   const [presets, setPresets] = useState<ReleasePreset[]>([])
   const [mentioned, setMentioned] = useState<Person[]>([])
   const [choices, setChoices] = useState<NameChoice[]>([])
@@ -81,9 +79,6 @@ function LetterFlow() {
   useEffect(() => {
     getViewer().then(setViewer).catch((err) => console.error(err))
     getReleasePresets().then(setPresets).catch((err) => console.error(err))
-    getLifeMap()
-      .then((map) => setStages(map?.stages ?? []))
-      .catch((err) => console.error(err))
     if (addId) {
       listMyLetters()
         .then(({ letters }) => setAddTo(letters.find((l) => l.id === addId) ?? null))
@@ -242,8 +237,9 @@ function LetterFlow() {
     <AudioCard
       title={letter.title}
       meta="Just now"
+      from={`${storytellerName} (you)`}
       urls={letter.pieces.map((p) => p.audioUrl)}
-      thumb={thumbFor(letter.stageId, stages)}
+      thumb={<Avatar name={storytellerName} size={96} />}
       menu={[{ label: 'Forget this', danger: true, onSelect: forgetRecording }]}
     />
   )

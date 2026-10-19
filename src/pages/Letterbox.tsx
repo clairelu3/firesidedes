@@ -1,13 +1,12 @@
-// /letterbox — the storyteller's home: record a letter, tell something she's never told anyone,
-// hear replies, and manage her letters. Only she can see or change these (checked in api.ts).
+// /letterbox — the storyteller's home: record a letter, hear replies, and manage her letters. Only she can see or change these (checked in api.ts).
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { decideRelease, deleteLetter, finishLetter, getLifeMap, getReleasePresets, getViewer, listMyLetters, releaseLetterNow, type Viewer } from '../api'
+import { decideRelease, deleteLetter, finishLetter, getMyName, getReleasePresets, getViewer, listMyLetters, releaseLetterNow, type Viewer } from '../api'
 import { ReleasePicker, releaseChoiceError } from '../components/ReleasePicker'
-import { AppShell, TAGLINE } from '../components/ui/AppShell'
+import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
 import { Avatar } from '../components/ui/Avatar'
-import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/Button'
+import { PrimaryButton, SecondaryButton } from '../components/ui/Button'
 import type { MenuItem } from '../components/ui/CardMenu'
 import { Card } from '../components/ui/Card'
 import { Notice } from '../components/ui/Notice'
@@ -15,9 +14,8 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { RecordButton } from '../components/ui/RecordButton'
 import { SectionHeader } from '../components/ui/SectionHeader'
 import { formatMemoDate } from '../lib/format'
-import { thumbFor } from '../lib/illustrations'
 import { openedSummary, releaseSummary } from '../lib/letterText'
-import type { FamilyMember, Letter, LetterReply, LifeStage, ReleaseChoice, ReleasePreset } from '../types'
+import type { FamilyMember, Letter, LetterReply, ReleaseChoice, ReleasePreset } from '../types'
 
 type Data = { letters: Letter[]; replies: LetterReply[]; members: FamilyMember[] }
 
@@ -34,7 +32,6 @@ export default function Letterbox() {
   const navigate = useNavigate()
   const [viewer, setViewer] = useState<Viewer | null>(null)
   const [data, setData] = useState<Data | null>(null)
-  const [stages, setStages] = useState<LifeStage[]>([])
   const [presets, setPresets] = useState<ReleasePreset[]>([])
   const [showAll, setShowAll] = useState(false)
   const [error, setError] = useState(false)
@@ -43,10 +40,9 @@ export default function Letterbox() {
     const v = await getViewer()
     setViewer(v)
     if (!v.isStoryteller) return
-    const [d, p, map] = await Promise.all([listMyLetters(), getReleasePresets(), getLifeMap()])
+    const [d, p] = await Promise.all([listMyLetters(), getReleasePresets()])
     setData(d)
     setPresets(p)
-    setStages(map?.stages ?? [])
   }
 
   useEffect(() => {
@@ -58,7 +54,7 @@ export default function Letterbox() {
 
   if (viewer && !viewer.isStoryteller) {
     return (
-      <AppShell subtitle={TAGLINE}>
+      <AppShell>
         <PageHeader title={`${viewer.storytellerName}’s letterbox`} subtitle={`Only ${viewer.storytellerName} can open her letterbox. Letters she shares are in the family book.`} />
         <PrimaryButton onClick={() => navigate('/book')}>Open the family book</PrimaryButton>
       </AppShell>
@@ -69,15 +65,10 @@ export default function Letterbox() {
   const letters = data?.letters ?? []
 
   return (
-    <AppShell hero="hero-grandma" subtitle={TAGLINE}>
+    <AppShell hero="hero-grandma">
       <PageHeader title="What do you remember?" subtitle="A place, a person, a taste, a moment. Your voice keeps it alive." />
 
       <RecordButton onClick={() => navigate('/record?start=1')} />
-      <div className="mt-1 text-center">
-        <TextButton tone="muted" onClick={() => navigate('/record?secret=1')}>
-          Something you’ve never told anyone
-        </TextButton>
-      </div>
 
       {error && (
         <Notice tone="error" className="mt-6">
@@ -116,7 +107,7 @@ export default function Letterbox() {
                   <p className="text-eyebrow mb-3">{g.title}</p>
                   <div className="space-y-4">
                     {inGroup.map((l) => (
-                      <LetterItem key={l.id} letter={l} stages={stages} members={data.members} presets={presets} onChanged={() => load().catch((err) => console.error(err))} />
+                      <LetterItem key={l.id} letter={l} members={data.members} presets={presets} onChanged={() => load().catch((err) => console.error(err))} />
                     ))}
                   </div>
                 </div>
@@ -125,7 +116,7 @@ export default function Letterbox() {
           ) : (
             <div className="space-y-4">
               {letters.slice(0, RECENT).map((l) => (
-                <LetterItem key={l.id} letter={l} stages={stages} members={data.members} presets={presets} onChanged={() => load().catch((err) => console.error(err))} />
+                <LetterItem key={l.id} letter={l} members={data.members} presets={presets} onChanged={() => load().catch((err) => console.error(err))} />
               ))}
             </div>
           )}
@@ -138,13 +129,11 @@ export default function Letterbox() {
 
 function LetterItem({
   letter,
-  stages,
   members,
   presets,
   onChanged,
 }: {
   letter: Letter
-  stages: LifeStage[]
   members: FamilyMember[]
   presets: ReleasePreset[]
   onChanged: () => void
@@ -205,7 +194,8 @@ function LetterItem({
       meta={formatMemoDate(letter.createdAt)}
       note={note}
       urls={[...letter.psPieces, ...letter.pieces].map((p) => p.audioUrl)}
-      thumb={thumbFor(letter.stageId, stages)}
+      from="you"
+      thumb={<Avatar name={getMyName()} size={96} />}
       menu={menu}
     >
       {(panel !== 'none' || error) && (

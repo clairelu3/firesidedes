@@ -5,6 +5,7 @@ import type { IllustrationSlot } from '../../lib/illustrations'
 import { AppHeader, type AppHeaderProps } from './AppHeader'
 import { IllustratedHero } from './IllustratedHero'
 import { CornerLeaves } from './Illustration'
+import { TAB_BAR_HEIGHT, TabBar } from './TabBar'
 
 export const TAGLINE = 'Your voice today,\na family book for tomorrow.'
 
@@ -18,6 +19,9 @@ type Props = AppHeaderProps & {
 }
 
 export function AppShell({ children, hero, heroSize = 'tall', spine = false, floating, floatingHeight = 0, ...header }: Props) {
+  // Top-level screens get the bottom tab bar; pushed screens (with a back chevron) and recording screens don't.
+  const tabs = !header.back && header.menu !== false
+  const tabSpace = tabs ? TAB_BAR_HEIGHT : 0
   return (
     <div className="min-h-dvh">
       <div className="relative mx-auto min-h-dvh max-w-[430px] overflow-x-clip">
@@ -37,16 +41,20 @@ export function AppShell({ children, hero, heroSize = 'tall', spine = false, flo
           </>
         )}
         <main
-          className={`relative px-6 ${hero ? '-mt-12' : 'pt-4'} ${spine ? 'pl-10' : ''}`}
-          style={{ paddingBottom: `calc(${40 + (floating ? floatingHeight : 0)}px + env(safe-area-inset-bottom))` }}
+          className={`relative px-6 ${hero ? 'pt-2' : 'pt-4'} ${spine ? 'pl-10' : ''}`}
+          style={{ paddingBottom: `calc(${40 + tabSpace + (floating ? floatingHeight : 0)}px + env(safe-area-inset-bottom))` }}
         >
           {children}
         </main>
         {floating && (
-          <div className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-[430px] bg-linear-to-t from-cream via-cream to-cream/0 px-6 pt-6 pb-[calc(16px+env(safe-area-inset-bottom))]">
+          <div
+            className={`fixed inset-x-0 z-10 mx-auto max-w-[430px] bg-linear-to-t from-cream via-cream to-cream/0 px-6 pt-6 ${tabs ? 'pb-4' : 'pb-[calc(16px+env(safe-area-inset-bottom))]'}`}
+            style={{ bottom: tabs ? `calc(${TAB_BAR_HEIGHT}px + env(safe-area-inset-bottom))` : 0 }}
+          >
             {floating}
           </div>
         )}
+        {tabs && <TabBar />}
       </div>
     </div>
   )

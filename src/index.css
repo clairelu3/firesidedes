@@ -13,6 +13,8 @@
   --color-pine-dark: #173b2c;
   --color-vermilion: #c8492f; /* mic button, chapter numerals, chop seals */
   --color-vermilion-dark: #a93b25;
+  --color-oxblood: #4b1414; /* the record button */
+  --color-oxblood-dark: #3a0f0f;
   --color-mango: #e9a23b; /* illustrations only */
   --color-sage: #dde6d7; /* selected options */
   --color-peach: #f3d6c1; /* illustration fallbacks */
@@ -81,7 +83,7 @@
 /* The type scale and the card surface. Pages use these instead of one-off sizes. */
 @layer components {
   .text-wordmark {
-    @apply font-display text-[40px] font-semibold leading-none tracking-[-0.01em] text-pine;
+    @apply font-display text-[40px] font-semibold italic leading-none tracking-[-0.01em] text-pine;
   }
   .text-title {
     @apply font-display text-[31px] font-semibold leading-[1.12] text-ink;
