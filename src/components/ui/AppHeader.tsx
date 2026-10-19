@@ -4,6 +4,7 @@ import { ChevronLeft } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { getMyName } from '../../api'
+import { toggleDemoPanel } from '../../lib/demoPanel'
 import { Avatar } from './Avatar'
 
 export type AppHeaderProps = {
@@ -39,9 +40,15 @@ export function AppHeader({ back, subtitle, divider = false, right }: AppHeaderP
 
       <div className="flex h-12 items-center justify-end">
         {right ?? (
-          <span title={name ?? undefined}>
+          <button
+            type="button"
+            onClick={toggleDemoPanel}
+            aria-label={`Signed in as ${name ?? 'you'}. Open demo controls`}
+            title="Demo controls: switch who's viewing, reset the demo"
+            className="flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
+          >
             <Avatar name={name} size={40} />
-          </span>
+          </button>
         )}
       </div>
 

@@ -30,6 +30,7 @@
   --animate-halo: halo 1.8s ease-in-out infinite;
   --animate-wave: wave 0.9s ease-in-out infinite;
   --animate-drawer: drawer 0.22s ease-out;
+  --animate-drop: drop 0.18s ease-out;
 
   @keyframes halo {
     0%,
@@ -49,6 +50,16 @@
     }
     50% {
       transform: scaleY(0.45);
+    }
+  }
+  @keyframes drop {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
   @keyframes drawer {
