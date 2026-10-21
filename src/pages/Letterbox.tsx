@@ -22,8 +22,7 @@ const RECENT = 3
 
 const GROUPS: { key: string; title: string; test: (l: Letter) => boolean }[] = [
   { key: 'undecided', title: 'Not sent yet', test: (l) => !l.decided },
-  { key: 'sealed', title: 'Sealed', test: (l) => l.decided && (l.releaseMode === 'date' || l.releaseMode === 'after') },
-  { key: 'private', title: 'Only for you', test: (l) => l.decided && l.releaseMode === 'private' },
+  { key: 'sealed', title: 'Sealed', test: (l) => l.decided && l.releaseMode === 'date' },
   { key: 'sent', title: 'In the family book', test: (l) => l.decided && l.releaseMode === 'now' },
 ]
 

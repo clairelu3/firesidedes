@@ -1,6 +1,6 @@
 // Seed data for demo mode (VITE_DEMO_MODE=true): Ama's family, life map and letters.
 // Audio for the seeded pieces lives in public/demo/ (scripts/make-demo-audio.sh regenerates it).
-import type { Chapter, Family, FamilyMember, Letter, LetterPiece, LetterReply, LifeMap } from '../types'
+import type { Chapter, Family, FamilyMember, Highlight, Letter, LetterPiece, LetterReply, LifeMap } from '../types'
 
 export const DEMO_FAMILY_CODE = 'lin'
 
@@ -117,22 +117,23 @@ export const seedLetters: Letter[] = [
   }),
   letter({
     id: 'l-after',
-    title: 'The night they took my father',
+    title: 'The night my father came home',
     photoUrl: '/demo/photos/kitchen.jpg',
     stageId: 's-1',
     createdAt: '2026-10-05T18:00:00Z',
     origin: 'secret',
-    releaseMode: 'after',
-    keeperId: 'm-mei',
-    recipients: 'all',
+    releaseMode: 'date',
+    releaseAt: '2031-06-12', // Lily's 18th birthday
+    recipients: ['m-lily'],
     sealedAt: '2026-10-05T18:15:00Z',
-    sensitive: { flagged: true, mentalHealth: false, matches: ['police', 'prison', 'stopped speaking'] },
-    nameChoices: [{ personId: 'p-wei', choice: 'keep' }],
+    sensitive: { flagged: true, mentalHealth: true, matches: ['war', 'drink', 'flashbacks'] },
     pieces: [
-      piece('pb1', '2026-10-05T18:00:00Z', 'In 1962 the police came to our house in Tainan at night and took my father away. He was in prison for four years because of something he said at work. We were told never to talk about it.'),
-      piece('pb2', '2026-10-05T18:06:00Z', 'My brother Wei blamed our mother for staying quiet, and they stopped speaking for twenty years. I want you to know it was not anyone’s fault. It was the times.'),
+      piece('pb1', '2026-10-05T18:00:00Z', 'I remember coming home from school in fifth grade and seeing my father run out the front door with a suitcase. He had come home from the Vietnam War only a few months before, so I didn’t understand why he was leaving.'),
+      piece('pb2', '2026-10-05T18:03:00Z', 'An hour later he came back, and he started shouting at my uncle. My uncle had died three years earlier.'),
+      piece('pb3', '2026-10-05T18:06:00Z', 'As a child, I was so confused. Years later, I learned that he left the house to drink, trying to fight what the war had left in him. The drinking brought the flashbacks. He would see the war again, and my uncle, who died while they were fighting.'),
+      piece('pb4', '2026-10-05T18:09:00Z', 'Later I understood that he wasn’t shouting at my uncle. He was telling him to get down.'),
     ],
-    psPieces: [piece('psB1', '2026-10-05T18:12:00Z', 'I am telling you this because our family carried this silence for too long. I do not want you to carry it too.', 'why')],
+    psPieces: [piece('psB1', '2026-10-05T18:12:00Z', 'I waited until you were grown, Lily, so you would know he was a good man that the war hurt. Not just a man who drank.', 'why')],
   }),
   letter({
     id: 'l-private',
@@ -142,8 +143,7 @@ export const seedLetters: Letter[] = [
     createdAt: '2026-10-12T20:00:00Z',
     origin: 'secret',
     status: 'in_progress',
-    releaseMode: 'private',
-    recipients: [],
+    decided: false, // not sent yet: no one hears it until she chooses
     sensitive: { flagged: true, mentalHealth: false, matches: ['never told'] },
     pieces: [
       piece('pp1', '2026-10-12T20:00:00Z', 'There is something about the restaurant money I never told David. When the restaurant closed in 1994, I lent all our savings to Wei, and he never paid it back.'),
@@ -151,9 +151,100 @@ export const seedLetters: Letter[] = [
   }),
 ]
 
+// Memory highlights for readers, keyed by chapter id. Each phrase appears in that chapter's text;
+// clip times are seconds into the piece's recording in public/demo/.
+const clip = (id: string, start: number, duration: number) => ({ url: `/demo/${id}.m4a`, start, duration })
+
+export const seedHighlights: Record<string, Highlight[]> = {
+  'c-1': [
+    {
+      id: 'h-courtyard',
+      phrase: 'the courtyard',
+      title: 'The courtyard',
+      year: '1950s',
+      place: 'Tainan',
+      detail:
+        'Her grandfather’s house was a sanhe-yuan: three wings of rooms around one open courtyard that the whole family shared. On summer nights the cousins laid their bamboo mats side by side on the bricks, where it was cooler than indoors. A mango tree stood in the corner, planted by Ama’s father the year she was born.',
+      audioClip: clip('pc1a', 4.6, 6.3),
+    },
+    {
+      id: 'h-grandmother',
+      phrase: 'my grandmother',
+      title: 'Her grandmother’s fan',
+      year: '1950s',
+      place: 'Tainan',
+      detail:
+        'Ama’s grandmother kept a palm-leaf fan with her all summer. At night she sat at the edge of the mats and fanned the children to keep the mosquitoes away until they fell asleep. Before Lunar New Year, she ran the kitchen for three days straight.',
+      audioClip: clip('pc1b', 0, 3.3),
+    },
+    {
+      id: 'h-wei',
+      phrase: 'my brother Wei',
+      title: 'Uncle Wei',
+      year: 'Born 1947',
+      place: 'Tainan',
+      detail:
+        'Wei is Ama’s older brother, three years ahead of her. As children they competed over everything, dumplings included. Ask him who folded the prettiest ones and you will hear a different answer.',
+      audioClip: clip('pc1b', 3.2, 3.9),
+    },
+  ],
+  'c-2': [
+    {
+      id: 'h-bakery',
+      phrase: 'one room above a bakery',
+      title: 'The room above the bakery',
+      year: '1975',
+      place: 'Valley Boulevard, San Gabriel',
+      detail:
+        'Their first home in America was a single rented room. The bakery downstairs lit its ovens before dawn, so the floor stayed warm in winter and everything smelled of bread. They lived there until they could afford an apartment of their own.',
+      audioClip: clip('pc2a', 3.4, 4.4),
+    },
+    {
+      id: 'h-factory',
+      phrase: 'a garment factory',
+      title: 'The garment factory',
+      year: '1975',
+      place: 'San Gabriel Valley',
+      detail:
+        'Ama sewed piecework, paid by the garment instead of by the hour. She worked from seven in the morning until dark, six days a week. Scraps came home with her and became clothes for the children.',
+      audioClip: clip('pc2a', 7.8, 4.2),
+    },
+  ],
+  'c-3': [
+    {
+      id: 'h-table',
+      phrase: 'the kitchen table',
+      title: 'The kitchen table',
+      year: '1986–today',
+      place: 'Arcadia',
+      detail:
+        'On Sundays the table disappeared under flour: a bowl of filling in the middle and a stack of wrappers in front of everyone. Mei learned to fold here, and years later so did Lily.',
+      audioClip: clip('pc3a', 0, 4.6),
+      image: '/demo/photos/kitchen.jpg',
+    },
+    {
+      id: 'h-ginger',
+      phrase: 'a little ginger',
+      title: 'The dumpling recipe',
+      place: 'Arcadia',
+      detail:
+        'Pork, napa cabbage, scallion, a spoon of sesame oil and fresh ginger grated very fine. Ama never measures, so watch her hands. Salt the cabbage first and squeeze out the water, or the wrappers tear.',
+      audioClip: clip('pc3b', 0, 3),
+    },
+  ],
+}
+
 export const seedChapters: Chapter[] = seedLetters
   .filter((l) => l.chapterId)
-  .map((l) => ({ id: l.chapterId!, title: l.title, stageId: l.stageId ?? '', passages: l.passages, status: 'approved', letterId: l.id }))
+  .map((l) => ({
+    id: l.chapterId!,
+    title: l.title,
+    stageId: l.stageId ?? '',
+    passages: l.passages,
+    status: 'approved',
+    letterId: l.id,
+    highlights: seedHighlights[l.chapterId!],
+  }))
 
 export const seedReplies: LetterReply[] = [
   { id: 'r-1', letterId: 'l-dumplings', memberId: 'm-lily', memberName: 'Lily', audioUrl: '/demo/reply-lily.m4a', createdAt: '2026-09-17T04:00:00Z' },

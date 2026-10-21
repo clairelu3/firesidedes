@@ -5,7 +5,7 @@ import { Copy, Info, Lock, LockOpen } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { addReply, getLetter, getLifeMap, getViewer, markLetterOpened, releaseAsKeeper } from '../api'
+import { addReply, getLetter, getLifeMap, getViewer, markLetterOpened } from '../api'
 import { MiniRecorder } from '../components/MiniRecorder'
 import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
@@ -15,7 +15,6 @@ import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/But
 import { Card } from '../components/ui/Card'
 import { ChopSeal } from '../components/ui/ChopSeal'
 import { EnvelopeArt } from '../components/ui/EnvelopeCard'
-import { Notice } from '../components/ui/Notice'
 import { PageHeader } from '../components/ui/PageHeader'
 import { SectionHeader } from '../components/ui/SectionHeader'
 import { SignatureLine } from '../components/ui/SignatureLine'
@@ -35,9 +34,7 @@ export default function LetterPage() {
   const [stages, setStages] = useState<LifeStage[]>([])
   const [signature, setSignature] = useState('家書')
   const [phase, setPhase] = useState<Phase>('choices')
-  const [confirmRelease, setConfirmRelease] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   async function load() {
     const [a, v, map] = await Promise.all([getLetter(id), getViewer(), getLifeMap()])
@@ -97,37 +94,6 @@ export default function LetterPage() {
           <p className="text-meta mt-2 text-[15px]">{envelope.opensLabel}</p>
         </div>
 
-        {access.canKeeperRelease && (
-          <Card className="mt-8">
-            <p className="text-card-title">{envelope.fromName} asked you to keep her letters until the time comes.</p>
-            {confirmRelease ? (
-              <div className="mt-4 space-y-3">
-                <Notice tone="quiet">This opens every letter {envelope.fromName} left for when she’s gone, for everyone she chose. It can’t be undone.</Notice>
-                <div className="flex gap-3">
-                  <SecondaryButton compact onClick={() => setConfirmRelease(false)}>
-                    Not yet
-                  </SecondaryButton>
-                  <PrimaryButton
-                    compact
-                    arrow={false}
-                    onClick={() =>
-                      releaseAsKeeper()
-                        .then(() => load())
-                        .catch((err) => setError(err instanceof Error ? err.message : String(err)))
-                    }
-                  >
-                    Release them
-                  </PrimaryButton>
-                </div>
-              </div>
-            ) : (
-              <PrimaryButton className="mt-4" onClick={() => setConfirmRelease(true)}>
-                Release {envelope.fromName}’s letters
-              </PrimaryButton>
-            )}
-            {error && <Notice tone="error" className="mt-3">{error}</Notice>}
-          </Card>
-        )}
       </AppShell>
     )
   }

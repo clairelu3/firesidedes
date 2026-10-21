@@ -9,7 +9,6 @@ import {
   getMyIdentity,
   joinFamily,
   listFamilyMembers,
-  releaseAsKeeper,
   saveCurrentMember,
   saveMyIdentity,
   uploadFamilyPhoto,
@@ -20,7 +19,7 @@ import { InviteSheet } from '../components/InviteSheet'
 import { WelcomeScreen } from '../components/WelcomeScreen'
 import { AppShell } from '../components/ui/AppShell'
 import { Avatar } from '../components/ui/Avatar'
-import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/Button'
+import { PrimaryButton, TextButton } from '../components/ui/Button'
 import { Card, TitledCard } from '../components/ui/Card'
 import { EnvelopeCard } from '../components/ui/EnvelopeCard'
 import { Field } from '../components/ui/Field'
@@ -392,8 +391,6 @@ function CoverPlaceholder({
 function EnvelopeWall() {
   const navigate = useNavigate()
   const [shelf, setShelf] = useState<LetterShelf | null>(null)
-  const [confirming, setConfirming] = useState(false)
-  const [releasing, setReleasing] = useState(false)
   const [sheetEnvelope, setSheetEnvelope] = useState<Envelope | null>(null)
 
   const load = () => getLetterShelf().then(setShelf)
@@ -421,7 +418,7 @@ function EnvelopeWall() {
   }
 
   const count = shelf.envelopes.length
-  if (count === 0 && shelf.waitingForOthers === 0 && shelf.keeperLetters === 0) return null
+  if (count === 0 && shelf.waitingForOthers === 0) return null
 
   return (
     <section className="pt-2">
@@ -439,48 +436,6 @@ function EnvelopeWall() {
         <p className="text-meta mt-4 text-[15px]">
           {shelf.fromName} has {shelf.waitingForOthers} {shelf.waitingForOthers === 1 ? 'letter' : 'letters'} waiting for others.
         </p>
-      )}
-      {shelf.keeperLetters > 0 && (
-        <Card tone="sage" className="mt-5">
-          <p className="text-card-title">
-            {shelf.fromName} asked you to keep {shelf.keeperLetters} {shelf.keeperLetters === 1 ? 'letter' : 'letters'} until the time comes.
-          </p>
-          {confirming ? (
-            <div className="mt-3">
-              <p className="text-body">
-                This opens every letter {shelf.fromName} left for when she’s gone, for everyone she chose. It can’t be undone.
-              </p>
-              <div className="mt-3 flex gap-3">
-                <SecondaryButton compact onClick={() => setConfirming(false)}>
-                  Not yet
-                </SecondaryButton>
-                <PrimaryButton
-                  compact
-                  arrow={false}
-                  disabled={releasing}
-                  onClick={async () => {
-                    setReleasing(true)
-                    try {
-                      await releaseAsKeeper()
-                      await load()
-                      setConfirming(false)
-                    } catch (err) {
-                      console.error(err)
-                    } finally {
-                      setReleasing(false)
-                    }
-                  }}
-                >
-                  Release them
-                </PrimaryButton>
-              </div>
-            </div>
-          ) : (
-            <PrimaryButton className="mt-3" onClick={() => setConfirming(true)}>
-              Release {shelf.fromName}’s letters
-            </PrimaryButton>
-          )}
-        </Card>
       )}
       <EnvelopeSheet envelope={sheetEnvelope} onClose={() => setSheetEnvelope(null)} />
     </section>

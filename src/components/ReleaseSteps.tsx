@@ -29,8 +29,6 @@ export function ReleaseStepOptions(props: StepProps) {
       return <WhoOptions {...props} />
     case 'day':
       return <DayOptions {...props} />
-    case 'keeper':
-      return <KeeperOptions {...props} />
   }
 }
 
@@ -83,16 +81,6 @@ function DayOptions({ value, onChange, presets }: StepProps) {
       <OptionRow icon={CalendarDays} selected={picking} onSelect={() => setPicking(true)} title="Pick a date" subtitle="Any day in the future">
         <PillInput type="date" aria-label="Pick a date" min={todayString()} value={value.releaseAt ?? ''} onChange={(e) => onChange({ ...value, releaseAt: e.target.value || undefined })} />
       </OptionRow>
-    </OptionList>
-  )
-}
-
-function KeeperOptions({ value, onChange, members }: StepProps) {
-  return (
-    <OptionList label="Who keeps it">
-      {members.map((m) => (
-        <OptionRow key={m.id} selected={value.keeperId === m.id} onSelect={() => onChange({ ...value, keeperId: m.id })} title={m.name} subtitle={m.relationship} />
-      ))}
     </OptionList>
   )
 }

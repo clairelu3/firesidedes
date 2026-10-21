@@ -17,14 +17,14 @@ import { SectionHeader } from '../components/ui/SectionHeader'
 import { STICKY_ACTION_BAR_HEIGHT, StickyActionBar } from '../components/ui/StickyActionBar'
 import { formatMemoDate } from '../lib/format'
 import { openedSummary, recipientNames, releaseSummary } from '../lib/letterText'
-import { choosesRecipients, releaseSentence, releaseSteps, STEP_TITLES, stepProblem, type ReleaseStep } from '../lib/releaseFlow'
+import { releaseSentence, releaseSteps, STEP_TITLES, stepProblem, type ReleaseStep } from '../lib/releaseFlow'
 import { useViewer } from '../lib/useViewer'
 import type { FamilyMember, Letter, LetterReply, ReleaseChoice, ReleasePreset } from '../types'
 
 type Edit = 'day' | 'who' | 'when'
 type Screen = { kind: 'overview' } | { kind: 'step'; edit: Edit; step: ReleaseStep } | { kind: 'confirm'; edit: Edit } | { kind: 'release' } | { kind: 'delete' }
 
-const choiceOf = (l: Letter): ReleaseChoice => ({ releaseMode: l.releaseMode, releaseAt: l.releaseAt, recipients: l.recipients, keeperId: l.keeperId })
+const choiceOf = (l: Letter): ReleaseChoice => ({ releaseMode: l.releaseMode, releaseAt: l.releaseAt, recipients: l.recipients })
 
 export default function LetterDetail() {
   const { id = '' } = useParams()
@@ -174,7 +174,7 @@ export default function LetterDetail() {
   if (screen.kind === 'release') {
     const back = () => setScreen({ kind: 'overview' })
     const what =
-      letter.releaseMode === 'private' || !letter.decided
+      !letter.decided
         ? 'It goes to the family book. Your family can read it once it’s approved.'
         : `${recipientNames(letter.recipients, others)} can open it today.`
     return (
@@ -240,7 +240,7 @@ export default function LetterDetail() {
             <SecondaryButton large onClick={() => startEdit('when')}>
               {letter.decided ? 'Change when they hear it' : 'Choose when they hear it'}
             </SecondaryButton>
-            {letter.decided && choosesRecipients(choiceOf(letter)) && (
+            {letter.decided && (
               <SecondaryButton large onClick={() => startEdit('who')}>
                 Change who it’s for
               </SecondaryButton>

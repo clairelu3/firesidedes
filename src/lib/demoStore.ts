@@ -3,7 +3,8 @@
 // letters store "idb:<key>" in place of a URL; api.ts turns those into object URLs.
 // Every storage access is wrapped: in a private window the demo still works for the session.
 import type { Chapter, Family, FamilyMember, Letter, LetterReply, LifeMap, Memo } from '../types'
-import { DEMO_FAMILY_CODE, seedChapters, seedFamily, seedLetters, seedLifeMap, seedMembers, seedReplies } from './demoSeed'
+import { withKnownRelease } from './legacyRelease'
+import { DEMO_FAMILY_CODE, seedChapters, seedFamily, seedHighlights, seedLetters, seedLifeMap, seedMembers, seedReplies } from './demoSeed'
 
 export type DemoState = {
   version: number
@@ -18,7 +19,7 @@ export type DemoState = {
 }
 
 const STATE_KEY = 'postscript-demo'
-const VERSION = 2 // bump when the seed changes, so stored demo data is replaced
+const VERSION = 3 // bump when the seed changes, so stored demo data is replaced
 
 function seed(): DemoState {
   // structuredClone so edits never touch the seed constants.
@@ -40,12 +41,20 @@ function load(): DemoState {
     const raw = localStorage.getItem(STATE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as DemoState
-      if (parsed.version === VERSION) return parsed
+      // Saved letters may still use a release mode that no longer exists; see legacyRelease.ts.
+      // Chapters saved before highlights existed get the seed's, so the demo shows them without a reset.
+      if (parsed.version === VERSION)
+        return { ...parsed, letters: parsed.letters.map(withKnownRelease), chapters: parsed.chapters.map(withSeedHighlights) }
     }
   } catch {
     // Unreadable or blocked storage: start from the seed.
   }
   return seed()
+}
+
+function withSeedHighlights(chapter: Chapter): Chapter {
+  const highlights = seedHighlights[chapter.id]
+  return chapter.highlights || !highlights ? chapter : { ...chapter, highlights: structuredClone(highlights) }
 }
 
 let state = load()

@@ -169,17 +169,17 @@
   }
 }
 
-/* Bottom sheet: slides up (280ms ease-out); follows the finger while dragging. */
+/* Bottom sheet: slides up with a spring-like ease (300ms); follows the finger while dragging. */
 .sheet-panel {
   transition:
-    transform 280ms ease-out,
-    height 280ms ease-out;
+    transform 300ms cubic-bezier(0.32, 0.72, 0, 1),
+    height 300ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 .sheet-panel.is-dragging {
   transition: none;
 }
 .sheet-fade {
-  transition: opacity 280ms ease-out;
+  transition: opacity 300ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
