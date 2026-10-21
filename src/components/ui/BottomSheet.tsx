@@ -1,14 +1,17 @@
 // Family side only: secondary details slide up over the page so readers never lose their place.
-// Opens at "medium" (~50%); drag the handle up for "large" (~90%), down to close. A labeled
-// Close button, the backdrop and Escape always close it too, so nothing depends on a gesture.
+// Opens at "medium" (~50%); drag the handle up for "large" (~90%), down to close; tapping the
+// handle toggles between the two. A labeled Close button, the backdrop and Escape always close
+// it too, so nothing depends on a gesture.
 import { X } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 
 export type Detent = 'medium' | 'large'
 
 const HEIGHT: Record<Detent, string> = { medium: '50dvh', large: '90dvh' }
-const DURATION = 280
+const DURATION = 300
 const SNAP = 60 // px of drag that changes detent
+const TAP = 6 // px of movement still counted as a tap on the handle
+const INTERACTIVE = 'button, a, input, textarea, select, [role="button"]'
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select, [tabindex]:not([tabindex="-1"])'
 
 type Props = {
@@ -18,9 +21,12 @@ type Props = {
   children: ReactNode
   detent?: Detent // controlled detent (e.g. "Read the transcript" asks for large)
   onDetentChange?: (detent: Detent) => void
+  heights?: Partial<Record<Detent, string>> // CSS heights, e.g. a short "peek" for medium
+  dragBody?: boolean // at medium, drag from anywhere on the sheet (for short, non-scrolling peeks)
+  backdropClassName?: string
 }
 
-export function BottomSheet({ open, onClose, title, children, detent: controlled, onDetentChange }: Props) {
+export function BottomSheet({ open, onClose, title, children, detent: controlled, onDetentChange, heights, dragBody = false, backdropClassName = 'bg-ink/35' }: Props) {
   const titleId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -30,7 +36,7 @@ export function BottomSheet({ open, onClose, title, children, detent: controlled
   const [own, setOwn] = useState<Detent>('medium')
   const [drag, setDrag] = useState(0)
   const [dragging, setDragging] = useState(false)
-  const dragStart = useRef<number | null>(null)
+  const dragStart = useRef<{ y: number; onHandle: boolean } | null>(null)
   const detent = controlled ?? own
   const setDetent = (d: Detent) => (onDetentChange ? onDetentChange(d) : setOwn(d))
 
@@ -83,22 +89,33 @@ export function BottomSheet({ open, onClose, title, children, detent: controlled
 
   if (!mounted) return null
 
+  const height = heights?.[detent] ?? HEIGHT[detent]
+  const bodyDrags = dragBody && detent === 'medium'
+
+  // Drags start on the handle or header, or anywhere at medium with dragBody; never on a control.
   function onPointerDown(e: ReactPointerEvent) {
-    dragStart.current = e.clientY
+    const target = e.target as HTMLElement
+    if (target.closest(INTERACTIVE)) return
+    const onHandle = !!target.closest('[data-sheet-grab]')
+    if (!onHandle && !bodyDrags) return
+    dragStart.current = { y: e.clientY, onHandle }
     setDragging(true)
     e.currentTarget.setPointerCapture(e.pointerId)
   }
   function onPointerMove(e: ReactPointerEvent) {
     if (dragStart.current === null) return
-    setDrag(e.clientY - dragStart.current)
+    setDrag(e.clientY - dragStart.current.y)
   }
   function onPointerUp() {
     if (dragStart.current === null) return
+    const { onHandle } = dragStart.current
     dragStart.current = null
     setDragging(false)
     const dy = drag
     setDrag(0)
-    if (dy < -SNAP) setDetent('large')
+    if (Math.abs(dy) < TAP) {
+      if (onHandle) setDetent(detent === 'medium' ? 'large' : 'medium')
+    } else if (dy < -SNAP) setDetent('large')
     else if (dy > SNAP) {
       if (detent === 'large') setDetent('medium')
       else onClose()
@@ -108,7 +125,7 @@ export function BottomSheet({ open, onClose, title, children, detent: controlled
   return (
     <div className="fixed inset-0 z-50">
       <div
-        className={`sheet-fade absolute inset-0 bg-ink/35 ${shown ? 'opacity-100' : 'opacity-0'}`}
+        className={`sheet-fade absolute inset-0 ${backdropClassName} ${shown ? 'opacity-100' : 'opacity-0'}`}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -119,22 +136,19 @@ export function BottomSheet({ open, onClose, title, children, detent: controlled
         aria-labelledby={titleId}
         className={`sheet-panel absolute inset-x-0 bottom-0 mx-auto flex max-w-[430px] flex-col rounded-t-[24px] bg-card shadow-float ${shown ? 'is-open' : ''} ${dragging ? 'is-dragging' : ''}`}
         style={{
-          height: `calc(${HEIGHT[detent]} - ${Math.min(0, drag)}px)`,
+          height: `calc(${height} - ${Math.min(0, drag)}px)`,
           transform: shown ? `translateY(${Math.max(0, drag)}px)` : 'translateY(100%)',
         }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
       >
-        {/* Grab handle: drag up for more room, down to close. The Close button does the same without a gesture. */}
-        <div
-          className="flex h-7 shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          aria-hidden="true"
-        >
+        {/* Grab handle: drag up for more room, down to close, tap to toggle. The Close button closes without a gesture. */}
+        <div data-sheet-grab className="flex h-7 shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing" aria-hidden="true">
           <span className="h-1.5 w-11 rounded-full bg-ink/20" />
         </div>
-        <div className="flex shrink-0 items-start gap-3 px-6 pb-3">
+        <div data-sheet-grab className="flex shrink-0 touch-none items-start gap-3 px-6 pb-3">
           <h2 id={titleId} className="text-heading min-w-0 flex-1 pt-1">
             {title}
           </h2>
@@ -148,7 +162,7 @@ export function BottomSheet({ open, onClose, title, children, detent: controlled
             Close
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-[calc(24px+env(safe-area-inset-bottom))]">{children}</div>
+        <div className={`min-h-0 flex-1 px-6 pb-[calc(24px+env(safe-area-inset-bottom))] ${bodyDrags ? 'touch-none overflow-hidden' : 'overflow-y-auto'}`}>{children}</div>
       </div>
     </div>
   )

@@ -1,8 +1,8 @@
 // Controls for recording the demo video. Tapping your avatar in the header toggles it.
-// Switch viewer, fake "today", play the keeper's part, reset to the seed. Changes reload the page.
+// Switch viewer, fake "today", reset to the seed. Changes reload the page.
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { demoKeeperRelease, demoReset, demoSetViewer, getViewer, IS_DEMO, type Viewer } from '../api'
+import { demoReset, demoSetViewer, getViewer, IS_DEMO, type Viewer } from '../api'
 import { TOGGLE_DEMO_PANEL } from '../lib/demoPanel'
 import { getFakeToday, setFakeToday, todayString } from '../lib/today'
 import { resetWelcome } from '../lib/welcome'
@@ -30,7 +30,6 @@ export function DemoPanel() {
   const [open, setOpen] = useState(readOpen)
   const [viewer, setViewer] = useState<Viewer | null>(null)
   const [date, setDate] = useState(() => getFakeToday() ?? '')
-  const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
     function onToggle() {
@@ -152,19 +151,6 @@ export function DemoPanel() {
       </div>
 
       <div className="mt-4 grid gap-2">
-        <SecondaryButton
-          compact
-          onClick={() =>
-            demoKeeperRelease()
-              .then((n) => {
-                setMessage(n ? `Released ${n} letter${n === 1 ? '' : 's'}.` : 'Nothing left to release.')
-                window.setTimeout(reload, 700)
-              })
-              .catch((err) => setMessage(String(err)))
-          }
-        >
-          Keeper releases letters
-        </SecondaryButton>
         {IS_DEMO && (
           <SecondaryButton
             compact
@@ -178,7 +164,6 @@ export function DemoPanel() {
           </SecondaryButton>
         )}
       </div>
-      {message && <p className="mt-2 text-sm text-muted">{message}</p>}
         </div>
       </div>
     </div>

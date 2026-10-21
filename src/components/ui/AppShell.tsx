@@ -14,10 +14,11 @@ type Props = AppHeaderProps & {
   spine?: boolean // the Family Book's dark-green spine down the left edge
   floating?: ReactNode
   floatingHeight?: number
+  floatingHidden?: boolean // hide the floating bar (e.g. under a bottom sheet) without shifting the page
   bare?: boolean // no header; content centered on the page (welcome screen)
 }
 
-export function AppShell({ children, hero, heroSize = 'tall', spine = false, floating, floatingHeight = 0, bare = false, ...header }: Props) {
+export function AppShell({ children, hero, heroSize = 'tall', spine = false, floating, floatingHeight = 0, floatingHidden = false, bare = false, ...header }: Props) {
   if (bare) {
     return (
       <div className="min-h-dvh">
@@ -58,7 +59,7 @@ export function AppShell({ children, hero, heroSize = 'tall', spine = false, flo
         </main>
         {floating && (
           <div
-            className={`fixed inset-x-0 z-10 mx-auto max-w-[430px] bg-linear-to-t from-cream via-cream to-cream/0 px-6 pt-6 ${tabs ? 'pb-4' : 'pb-[calc(16px+env(safe-area-inset-bottom))]'}`}
+            className={`fixed inset-x-0 z-10 mx-auto max-w-[430px] bg-linear-to-t from-cream via-cream to-cream/0 px-6 pt-6 ${tabs ? 'pb-4' : 'pb-[calc(16px+env(safe-area-inset-bottom))]'} ${floatingHidden ? 'invisible' : ''}`}
             style={{ bottom: tabs ? `calc(${TAB_BAR_HEIGHT}px + env(safe-area-inset-bottom))` : 0 }}
           >
             {floating}

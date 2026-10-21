@@ -72,7 +72,7 @@ function LetterFlow() {
   const [pieceId, setPieceId] = useState<string | null>(null)
   const [transcript, setTranscript] = useState('')
   const [sensitivity, setSensitivity] = useState<Sensitivity | null>(null)
-  const [choice, setChoice] = useState<ReleaseChoice>({ releaseMode: secret ? 'private' : 'now', recipients: 'all' })
+  const [choice, setChoice] = useState<ReleaseChoice>({ releaseMode: 'now', recipients: 'all' })
   const [presets, setPresets] = useState<ReleasePreset[]>([])
   const [mentioned, setMentioned] = useState<Person[]>([])
   const [choices, setChoices] = useState<NameChoice[]>([])
@@ -151,7 +151,7 @@ function LetterFlow() {
 
   async function goNext() {
     const current = screen as FlowStep
-    if (current === 'who' || current === 'day' || current === 'keeper') {
+    if (current === 'who' || current === 'day') {
       const problem = stepProblem(current, choice)
       if (problem) return setError(problem)
     }
@@ -324,8 +324,8 @@ function LetterFlow() {
     )
   }
 
-  // --- 2–4. when / who / which day / who keeps it ---
-  if ((screen === 'when' || screen === 'who' || screen === 'day' || screen === 'keeper') && letter) {
+  // --- 2–4. when / who / which day ---
+  if ((screen === 'when' || screen === 'who' || screen === 'day') && letter) {
     const { title, subtitle } = STEP_TITLES[screen]
     return stepShell(
       <>
@@ -511,14 +511,8 @@ function LetterFlow() {
 
   // --- done ---
   if (screen === 'done' && letter) {
-    const title =
-      letter.releaseMode === 'now' ? 'Sent to your family book'
-      : letter.releaseMode === 'private' ? 'Kept just for you'
-      : 'Your letter is sealed'
-    const subtitle =
-      letter.releaseMode === 'now' ? 'Your family can read it once it’s approved in Review.'
-      : letter.releaseMode === 'private' ? 'No one can hear this until you decide. You can share it any time from your letters.'
-      : releaseSummary(letter, viewer?.members ?? [])
+    const title = letter.releaseMode === 'now' ? 'Sent to your family book' : 'Your letter is sealed'
+    const subtitle = letter.releaseMode === 'now' ? 'Your family can read it once it’s approved in Review.' : releaseSummary(letter, viewer?.members ?? [])
     return (
       <AppShell back="/letterbox" labeledBack>
         <PageHeader title={title} subtitle={subtitle} />

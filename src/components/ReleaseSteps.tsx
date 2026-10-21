@@ -1,6 +1,6 @@
 // The body of each release step screen: one question, one list of choices. No pop-ups,
 // no expanders beyond the date field inside "Pick a date".
-import { CalendarDays, Feather, Lock, Send, Users } from 'lucide-react'
+import { CalendarDays, Send, Users } from 'lucide-react'
 import { useState } from 'react'
 import type { ReleaseStep } from '../lib/releaseFlow'
 import { formatDay, todayString } from '../lib/today'
@@ -18,8 +18,6 @@ type StepProps = {
 const MODES: { mode: ReleaseMode; label: string; hint: string; icon: typeof Send }[] = [
   { mode: 'now', label: 'Now', hint: 'They can hear it right away, once it’s in the book.', icon: Send },
   { mode: 'date', label: 'On a special day', hint: 'Choose a date for it to be released.', icon: CalendarDays },
-  { mode: 'after', label: 'When I am gone', hint: 'Release after I pass away.', icon: Feather },
-  { mode: 'private', label: 'Only for me', hint: 'Keep it private in my book.', icon: Lock },
 ]
 
 export function ReleaseStepOptions(props: StepProps) {
@@ -30,8 +28,6 @@ export function ReleaseStepOptions(props: StepProps) {
       return <WhoOptions {...props} />
     case 'day':
       return <DayOptions {...props} />
-    case 'keeper':
-      return <KeeperOptions {...props} />
   }
 }
 
@@ -84,16 +80,6 @@ function DayOptions({ value, onChange, presets }: StepProps) {
       <OptionRow icon={CalendarDays} selected={picking} onSelect={() => setPicking(true)} title="Pick a date" subtitle="Any day in the future">
         <PillInput type="date" aria-label="Pick a date" min={todayString()} value={value.releaseAt ?? ''} onChange={(e) => onChange({ ...value, releaseAt: e.target.value || undefined })} />
       </OptionRow>
-    </OptionList>
-  )
-}
-
-function KeeperOptions({ value, onChange, members }: StepProps) {
-  return (
-    <OptionList label="Who keeps it">
-      {members.map((m) => (
-        <OptionRow key={m.id} selected={value.keeperId === m.id} onSelect={() => onChange({ ...value, keeperId: m.id })} title={m.name} subtitle={m.relationship} />
-      ))}
     </OptionList>
   )
 }

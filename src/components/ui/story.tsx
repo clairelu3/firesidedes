@@ -1,4 +1,5 @@
-import type { Passage } from '../../types'
+import type { KeyboardEvent, ReactNode } from 'react'
+import type { Highlight, Passage } from '../../types'
 
 export function Diamond({ className = '' }: { className?: string }) {
   return <span className={`block size-1.5 rotate-45 bg-vermilion ${className}`} aria-hidden="true" />
@@ -14,7 +15,7 @@ export function Divider({ className = '' }: { className?: string }) {
   )
 }
 
-export function DropCapParagraph({ children }: { children: string }) {
+export function DropCapParagraph({ children }: { children: ReactNode }) {
   return (
     <p className="text-story first-letter:float-left first-letter:mt-1.5 first-letter:mr-2.5 first-letter:font-display first-letter:text-[74px] first-letter:leading-[0.8] first-letter:font-semibold first-letter:text-vermilion">
       {children}
@@ -22,7 +23,7 @@ export function DropCapParagraph({ children }: { children: string }) {
   )
 }
 
-export function PullQuote({ children, align = 'left' }: { children: string; align?: 'left' | 'center' }) {
+export function PullQuote({ children, align = 'left' }: { children: ReactNode; align?: 'left' | 'center' }) {
   if (align === 'center') {
     return (
       <blockquote className="py-2 text-center">
@@ -43,14 +44,95 @@ function isQuotation(text: string) {
   return /^\s*[“"]/.test(text)
 }
 
+type Mark = { start: number; end: number; highlight: Highlight }
+
+// Phrase as a pattern: case-insensitive, any run of spaces, straight or curly apostrophes.
+function phrasePattern(phrase: string) {
+  const parts = phrase.trim().split(/\s+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/['’]/g, "['’]"))
+  return new RegExp(parts.join('\\s+'), 'gi')
+}
+
+// Where each highlight lands: its first occurrence across the passages that doesn't overlap
+// another. The drop-cap paragraph never matches at index 0, so the drop cap stays plain text.
+function placeHighlights(texts: string[], highlights: Highlight[], dropCap: number): Mark[][] {
+  const marks: Mark[][] = texts.map(() => [])
+  for (const highlight of highlights) {
+    if (!highlight.phrase.trim()) continue
+    const re = phrasePattern(highlight.phrase)
+    search: for (let i = 0; i < texts.length; i++) {
+      re.lastIndex = 0
+      for (let m = re.exec(texts[i]!); m; m = re.exec(texts[i]!)) {
+        const start = m.index
+        const end = start + m[0].length
+        if (i === dropCap && start === 0) continue
+        if (marks[i]!.some((k) => start < k.end && end > k.start)) continue
+        marks[i]!.push({ start, end, highlight })
+        break search
+      }
+    }
+  }
+  for (const list of marks) list.sort((a, b) => a.start - b.start)
+  return marks
+}
+
+function HighlightedText({ text, marks, activeId, onOpen }: { text: string; marks: Mark[]; activeId?: string; onOpen: (h: Highlight) => void }) {
+  if (!marks.length) return text
+  const out: ReactNode[] = []
+  let at = 0
+  for (const { start, end, highlight } of marks) {
+    if (start > at) out.push(text.slice(at, start))
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        onOpen(highlight)
+      }
+    }
+    // A span (not <button>) so a multi-word phrase can wrap across lines like the rest of the text.
+    out.push(
+      <span
+        key={highlight.id}
+        role="button"
+        tabIndex={0}
+        aria-label={`More about: ${highlight.phrase}`}
+        aria-haspopup="dialog"
+        onClick={() => onOpen(highlight)}
+        onKeyDown={onKeyDown}
+        className={`cursor-pointer rounded-[3px] font-medium text-pine underline decoration-pine/35 decoration-2 underline-offset-[5px] transition-colors [box-decoration-break:clone] [-webkit-tap-highlight-color:transparent] hover:bg-pine/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pine active:bg-pine/10 ${activeId === highlight.id ? 'bg-pine/10' : ''}`}
+      >
+        {text.slice(start, end)}
+      </span>,
+    )
+    at = end
+  }
+  if (at < text.length) out.push(text.slice(at))
+  return out
+}
+
 // Passages as book text: drop cap on the first paragraph, quotations as pull quotes.
-export function StoryPassages({ passages, quoteAlign = 'left' }: { passages: Passage[]; quoteAlign?: 'left' | 'center' }) {
+// With highlights, the first occurrence of each phrase becomes tappable (onHighlight opens it).
+export function StoryPassages({
+  passages,
+  quoteAlign = 'left',
+  highlights,
+  activeHighlightId,
+  onHighlight,
+}: {
+  passages: Passage[]
+  quoteAlign?: 'left' | 'center'
+  highlights?: Highlight[]
+  activeHighlightId?: string
+  onHighlight?: (highlight: Highlight) => void
+}) {
+  const texts = passages.map((p) => (isQuotation(p.text) ? p.text.trim() : p.text))
+  const dropCap = isQuotation(passages[0]?.text ?? '') ? -1 : 0
+  const marks = highlights?.length && onHighlight ? placeHighlights(texts, highlights, dropCap) : texts.map(() => [])
+  const body = (i: number) => <HighlightedText text={texts[i]!} marks={marks[i]!} activeId={activeHighlightId} onOpen={(h) => onHighlight?.(h)} />
   return (
     <div className="space-y-5">
       {passages.map((p, i) => {
-        if (isQuotation(p.text)) return <PullQuote key={i} align={quoteAlign}>{p.text.trim()}</PullQuote>
-        if (i === 0) return <DropCapParagraph key={i}>{p.text}</DropCapParagraph>
-        return <p key={i} className="text-story">{p.text}</p>
+        if (isQuotation(p.text)) return <PullQuote key={i} align={quoteAlign}>{body(i)}</PullQuote>
+        if (i === 0) return <DropCapParagraph key={i}>{body(i)}</DropCapParagraph>
+        return <p key={i} className="text-story">{body(i)}</p>
       })}
     </div>
   )

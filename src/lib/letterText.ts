@@ -16,12 +16,8 @@ export function releaseSummary(l: Letter, members: FamilyMember[]): string {
   switch (l.releaseMode) {
     case 'now':
       return 'Shared with the family book'
-    case 'private':
-      return 'Only for you'
     case 'date':
       return `For ${recipientNames(l.recipients, members)} · opens ${l.releaseAt ? formatDay(l.releaseAt) : 'on a special day'}`
-    case 'after':
-      return `For ${recipientNames(l.recipients, members)} · when you’re gone · ${nameOf(l.keeperId, members)} keeps it${l.keeperReleasedAt ? ' (released)' : ''}`
   }
 }
 

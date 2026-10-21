@@ -1,6 +1,7 @@
 import { Check, Clock, EyeOff, MapPin, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getLifeMap, getMyName, listChapters, listMemos, updateChapter } from '../api'
+import { HighlightSheet } from '../components/HighlightSheet'
 import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
 import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/Button'
@@ -13,7 +14,7 @@ import { Pager } from '../components/ui/Pager'
 import { Divider, StoryPassages } from '../components/ui/story'
 import { firstName, readMinutes, startYear } from '../lib/format'
 import { sealFor } from '../lib/illustrations'
-import type { Chapter, LifeStage, Memo } from '../types'
+import type { Chapter, Highlight, LifeStage, Memo } from '../types'
 
 const REVIEW_PANEL_HEIGHT = 128
 
@@ -32,6 +33,7 @@ export default function Chapters() {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
+  const [highlight, setHighlight] = useState<Highlight | null>(null)
 
   useEffect(() => {
     Promise.all([listChapters(), getLifeMap(), listMemos()])
@@ -123,6 +125,7 @@ export default function Chapters() {
     <AppShell
       subtitle="Review"
       floatingHeight={REVIEW_PANEL_HEIGHT}
+      floatingHidden={!!highlight}
       floating={
         <div className="surface-card p-4">
           <p className="text-center font-serif text-[17px] text-ink">Does this feel true to your memory?</p>
@@ -187,7 +190,7 @@ export default function Chapters() {
             ))}
           </div>
         ) : (
-          <StoryPassages passages={chapter.passages} />
+          <StoryPassages passages={chapter.passages} highlights={chapter.highlights} activeHighlightId={highlight?.id} onHighlight={setHighlight} />
         )}
 
         {audioUrls.length > 0 && (
@@ -196,6 +199,8 @@ export default function Chapters() {
       </article>
 
       {error && <Notice tone="error" className="mt-4">We couldn’t load everything. Refresh to try again.</Notice>}
+
+      <HighlightSheet highlight={highlight} from={first || undefined} onClose={() => setHighlight(null)} />
     </AppShell>
   )
 }

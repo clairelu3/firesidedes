@@ -9,6 +9,7 @@ import { supabase } from './lib/supabase'
 import { resizeImage } from './lib/image'
 import { DEMO_FAMILY_CODE, deleteAudio, demoState, persist, putAudio, resetDemoState, resolveAudio as resolveDemoAudio } from './lib/demoStore'
 import { firstName, letterTitle } from './lib/format'
+import { withKnownRelease } from './lib/legacyRelease'
 import { releasePresets } from './lib/releasePresets'
 import { detectPeople, detectSensitive, replaceNames } from './lib/sensitivity'
 import { formatDay, getToday, todayString } from './lib/today'
@@ -17,6 +18,7 @@ import type {
   Envelope,
   Family,
   FamilyMember,
+  Highlight,
   Letter,
   LetterAccess,
   LetterPiece,
@@ -75,7 +77,7 @@ type MemoRow = {
   stage_id?: number | null
   tags?: MemoTags | null
 }
-type ChapterRow = { id: number; stage_id: number | null; title: string | null; body: unknown; status: string | null; letter_id?: string | null }
+type ChapterRow = { id: number; stage_id: number | null; title: string | null; body: unknown; status: string | null; letter_id?: string | null; highlights?: unknown }
 
 // --- mapping helpers ---
 
@@ -158,7 +160,18 @@ function toChapter(row: ChapterRow): Chapter {
     passages: toPassages(row.body),
     status,
     letterId: row.letter_id || undefined,
+    highlights: toHighlights(row.highlights),
   }
+}
+
+// Optional jsonb column; anything malformed is dropped so the chapter still renders.
+function toHighlights(raw: unknown): Highlight[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const list = raw.filter(
+    (h): h is Highlight =>
+      !!h && typeof h === 'object' && typeof h.id === 'string' && typeof h.phrase === 'string' && typeof h.title === 'string' && typeof h.detail === 'string',
+  )
+  return list.length ? list : undefined
 }
 
 function readStoryteller(): { name: string; birthYear: number } | null {
@@ -693,8 +706,8 @@ type LetterRow = {
   release_mode: string | null
   release_at: string | null
   recipients: Recipients | null
-  keeper_id: string | null
-  keeper_released_at: string | null
+  keeper_id?: string | null // legacy "when I'm gone" columns: still in the schema, no longer read or written
+  keeper_released_at?: string | null
   sealed_at: string | null
   excluded: string[] | null
   name_choices: NameChoice[] | null
@@ -705,10 +718,9 @@ type LetterRow = {
 }
 type LetterReplyRow = { id: string; family_code: string; letter_id: string; member_id: string; member_name: string | null; audio_url: string | null; created_at: string }
 
-const RELEASE_MODES: Letter['releaseMode'][] = ['now', 'date', 'after', 'private']
-
 function toLetter(row: LetterRow): Letter {
-  return {
+  // Old rows can hold 'after' or 'private'; withKnownRelease reads those as an undecided "Now".
+  return withKnownRelease({
     id: row.id,
     title: row.title ?? '',
     stageId: row.stage_id == null ? undefined : String(row.stage_id),
@@ -718,11 +730,9 @@ function toLetter(row: LetterRow): Letter {
     decided: row.decided ?? false,
     pieces: row.pieces ?? [],
     psPieces: row.ps_pieces ?? [],
-    releaseMode: RELEASE_MODES.find((m) => m === row.release_mode) ?? 'private',
+    releaseMode: (row.release_mode ?? 'now') as Letter['releaseMode'],
     releaseAt: row.release_at ?? undefined,
     recipients: row.recipients ?? [],
-    keeperId: row.keeper_id ?? undefined,
-    keeperReleasedAt: row.keeper_released_at ?? undefined,
     sealedAt: row.sealed_at ?? undefined,
     excluded: row.excluded ?? [],
     nameChoices: row.name_choices ?? [],
@@ -730,7 +740,7 @@ function toLetter(row: LetterRow): Letter {
     passages: row.passages ?? [],
     openedAt: row.opened_at ?? {},
     chapterId: row.chapter_id == null ? undefined : String(row.chapter_id),
-  }
+  })
 }
 
 function fromLetter(l: Letter, familyCode: string): LetterRow {
@@ -748,8 +758,6 @@ function fromLetter(l: Letter, familyCode: string): LetterRow {
     release_mode: l.releaseMode,
     release_at: l.releaseAt ?? null,
     recipients: l.recipients,
-    keeper_id: l.keeperId ?? null,
-    keeper_released_at: l.keeperReleasedAt ?? null,
     sealed_at: l.sealedAt ?? null,
     excluded: l.excluded,
     name_choices: l.nameChoices,
@@ -855,8 +863,7 @@ const store: LetterStore = IS_DEMO ? demoStore : supabaseStore
 
 // Permission checks below are demo-level, NOT real security: "who am I" is a member id in the
 // browser, and anyone with the anon key can read or write the tables directly. They keep the app
-// honest for the demo (only the storyteller can see or change her sealed letters, only the keeper
-// can release "when I'm gone" letters). Real privacy needs auth plus row-level security.
+// honest for the demo (only the storyteller can see or change her sealed letters). Real privacy needs auth plus row-level security.
 function requireStoryteller(ctx: LetterContext) {
   if (ctx.me?.role !== 'storyteller') throw new Error('Only the storyteller can change her letters.')
 }
@@ -872,16 +879,14 @@ function isRecipient(l: Letter, memberId: string, members: FamilyMember[]) {
   return l.recipients === 'all' || l.recipients.includes(memberId)
 }
 
-// Sealed = waiting for a day or for the keeper. These show as envelopes.
+// Sealed = waiting for a day. These show as envelopes.
 function isSealed(l: Letter) {
-  return l.decided && l.status === 'finished' && (l.releaseMode === 'date' || l.releaseMode === 'after')
+  return l.decided && l.status === 'finished' && l.releaseMode === 'date'
 }
 
 function releaseHasArrived(l: Letter) {
   if (l.releaseMode === 'now') return true
-  if (l.releaseMode === 'date') return !!l.releaseAt && todayString() >= l.releaseAt
-  if (l.releaseMode === 'after') return !!l.keeperReleasedAt
-  return false
+  return !!l.releaseAt && todayString() >= l.releaseAt
 }
 
 function isOpenable(l: Letter, memberId: string, members: FamilyMember[]) {
@@ -966,7 +971,6 @@ async function presentForReader(l: Letter, people: Person[]): Promise<Letter> {
     psPieces: swapPieces(l.psPieces),
     excluded: [],
     nameChoices: [],
-    keeperId: undefined,
   })
 }
 
@@ -1088,7 +1092,7 @@ export async function createLetter({ origin, blob, transcript }: { origin: Lette
     decided: false,
     pieces: [piece],
     psPieces: [],
-    releaseMode: origin === 'secret' ? 'private' : 'now',
+    releaseMode: 'now',
     recipients: 'all',
     excluded: [],
     nameChoices: [],
@@ -1172,17 +1176,14 @@ export async function decideRelease(letterId: string, choice: ReleaseChoice, sen
   const { letter } = await editableLetter(letterId)
   if (hasBeenOpened(letter)) throw new Error('This letter has already been opened.')
   if (choice.releaseMode === 'date' && !choice.releaseAt) throw new Error('Pick a day.')
-  if (choice.releaseMode === 'after' && !choice.keeperId) throw new Error('Choose who keeps it.')
 
-  const sealing = choice.releaseMode === 'date' || choice.releaseMode === 'after'
+  const sealing = choice.releaseMode === 'date'
   let updated: Letter = {
     ...letter,
     decided: true,
     releaseMode: choice.releaseMode,
     releaseAt: choice.releaseMode === 'date' ? choice.releaseAt : undefined,
-    recipients: choice.releaseMode === 'private' ? [] : choice.recipients,
-    keeperId: choice.releaseMode === 'after' ? choice.keeperId : undefined,
-    keeperReleasedAt: choice.releaseMode === 'after' ? letter.keeperReleasedAt : undefined,
+    recipients: choice.recipients,
     sealedAt: sealing ? (letter.sealedAt ?? getToday().toISOString()) : undefined,
     sensitive: sensitive ? mergeSensitivity(letter.sensitive, sensitive) : letter.sensitive,
   }
@@ -1225,11 +1226,11 @@ export async function finishLetter(letterId: string): Promise<Letter> {
   return hydrate(updated)
 }
 
-/** "Release now": a private letter goes to review like a "Now" letter; a sealed one opens today. */
+/** "Release now": an undecided letter goes to review like a "Now" letter; a sealed one opens today. */
 export async function releaseLetterNow(letterId: string): Promise<Letter> {
   const { letter } = await editableLetter(letterId)
-  if (letter.releaseMode === 'private' || !letter.decided) return decideRelease(letterId, { releaseMode: 'now', recipients: 'all' })
-  const updated: Letter = { ...letter, status: 'finished', releaseMode: 'date', releaseAt: todayString(), keeperId: undefined }
+  if (!letter.decided) return decideRelease(letterId, { releaseMode: 'now', recipients: 'all' })
+  const updated: Letter = { ...letter, status: 'finished', releaseMode: 'date', releaseAt: todayString() }
   await store.putLetter(updated)
   return hydrate(updated)
 }
@@ -1275,12 +1276,11 @@ export async function getLetter(letterId: string): Promise<LetterAccess> {
   }
 
   if (!isSealed(letter)) return { kind: 'hidden' }
-  const canKeeperRelease = letter.releaseMode === 'after' && letter.keeperId === me.id && !letter.keeperReleasedAt
   if (isOpenable(letter, me.id, ctx.members)) {
     return { kind: 'reader', letter: await presentForReader(letter, ctx.people), opened: !!letter.openedAt[me.id], replies: await myReplies(), fromName: ctx.storytellerName }
   }
-  if (isRecipient(letter, me.id, ctx.members) || canKeeperRelease) {
-    return { kind: 'envelope', envelope: envelopeFor(letter, ctx, me.id), canKeeperRelease }
+  if (isRecipient(letter, me.id, ctx.members)) {
+    return { kind: 'envelope', envelope: envelopeFor(letter, ctx, me.id) }
   }
   return { kind: 'hidden' }
 }
@@ -1310,7 +1310,6 @@ export type LetterShelf = {
   envelopes: Envelope[] // sealed letters for the viewer that they haven't opened
   openedChapters: Chapter[] // letters the viewer opened, as book pages
   waitingForOthers: number // sealed letters for other people: a count only
-  keeperLetters: number // unreleased "when I'm gone" letters this viewer keeps
   isStoryteller: boolean
 }
 
@@ -1319,7 +1318,7 @@ export async function getLetterShelf(): Promise<LetterShelf> {
   const [ctx, letters] = await Promise.all([store.context(), store.letters()])
   const me = ctx.me
   const sealed = letters.filter(isSealed)
-  const shelf: LetterShelf = { fromName: ctx.storytellerName, envelopes: [], openedChapters: [], waitingForOthers: 0, keeperLetters: 0, isStoryteller: isStoryteller(ctx) }
+  const shelf: LetterShelf = { fromName: ctx.storytellerName, envelopes: [], openedChapters: [], waitingForOthers: 0, isStoryteller: isStoryteller(ctx) }
   if (!me) return shelf
   if (isStoryteller(ctx)) {
     // The storyteller sees her own sealed letters as envelopes too, so she knows what's waiting and for whom.
@@ -1339,7 +1338,6 @@ export async function getLetterShelf(): Promise<LetterShelf> {
       }),
   )
   shelf.waitingForOthers = sealed.filter((l) => !isRecipient(l, me.id, ctx.members)).length
-  shelf.keeperLetters = sealed.filter((l) => l.releaseMode === 'after' && l.keeperId === me.id && !l.keeperReleasedAt).length
   return shelf
 }
 
@@ -1351,20 +1349,6 @@ export async function getWaitingCounts(): Promise<Record<string, number>> {
     counts[m.id] = letters.filter((l) => isSealed(l) && isRecipient(l, m.id, ctx.members) && !l.openedAt[m.id]).length
   }
   return counts
-}
-
-async function releaseAfterLetters(keeperId: string | null): Promise<number> {
-  const letters = (await store.letters()).filter((l) => isSealed(l) && l.releaseMode === 'after' && !l.keeperReleasedAt && (keeperId === null || l.keeperId === keeperId))
-  const now = getToday().toISOString()
-  for (const l of letters) await store.putLetter({ ...l, keeperReleasedAt: now })
-  return letters.length
-}
-
-/** "Release Ama's letters": only the keeper she chose can do this. */
-export async function releaseAsKeeper(): Promise<number> {
-  const ctx = await store.context()
-  if (!ctx.me) throw new Error('Who are you?')
-  return releaseAfterLetters(ctx.me.id)
 }
 
 // --- demo controls (opened from the header avatar) ---
@@ -1379,11 +1363,6 @@ export async function demoSetViewer(memberId: string) {
   const member = (await listFamilyMembers(code)).find((m) => m.id === memberId)
   saveCurrentMember(code, memberId)
   if (member) saveMyIdentity({ code, name: member.name })
-}
-
-/** Plays the keeper's part for the video: releases every "when I'm gone" letter. */
-export function demoKeeperRelease(): Promise<number> {
-  return releaseAfterLetters(null)
 }
 
 export async function demoReset() {

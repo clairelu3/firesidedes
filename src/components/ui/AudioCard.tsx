@@ -93,7 +93,7 @@ export function AudioCard({ title, meta, from, audioUrl, urls, thumb, menu = [],
 }
 
 // Static bars from the title (so each card has its own shape), animated while playing.
-function Waveform({ seed, progress, playing }: { seed: string; progress: number; playing: boolean }) {
+export function Waveform({ seed, progress, playing }: { seed: string; progress: number; playing: boolean }) {
   const bars = useMemo(() => {
     let h = 0
     for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0
