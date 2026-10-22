@@ -1,11 +1,13 @@
 // /letter/:id — open or read a letter. Readers see an envelope until it's openable; on the day:
 // "Open now / Later / Open with someone", then heads-up (if sensitive) → P.S. → the letter →
-// a voice reply. api.ts decides how much of the letter this viewer may see.
+// a voice reply. api.ts decides how much of the letter this viewer may see. Memory highlights
+// are for readers only: the author view (Ama) is plain text, and a sealed letter has no text to show.
 import { Copy, Info, Lock, LockOpen } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { addReply, getLetter, getLifeMap, getViewer, markLetterOpened } from '../api'
+import { useHighlightSheet } from '../components/HighlightSheet'
 import { MiniRecorder } from '../components/MiniRecorder'
 import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
@@ -18,7 +20,7 @@ import { EnvelopeArt } from '../components/ui/EnvelopeCard'
 import { PageHeader } from '../components/ui/PageHeader'
 import { SectionHeader } from '../components/ui/SectionHeader'
 import { SignatureLine } from '../components/ui/SignatureLine'
-import { DropCapParagraph } from '../components/ui/story'
+import { DropCapParagraph, useHighlightedText, type HighlightOptions } from '../components/ui/story'
 import { cjkName, sealFor } from '../lib/illustrations'
 import { PS_PROMPT_LABEL, releaseSummary } from '../lib/letterText'
 import { publicBaseUrl } from '../lib/qrApi'
@@ -35,6 +37,7 @@ export default function LetterPage() {
   const [signature, setSignature] = useState('家書')
   const [phase, setPhase] = useState<Phase>('choices')
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const highlights = useHighlightSheet(access?.kind === 'reader' ? access.fromName : undefined)
 
   async function load() {
     const [a, v, map] = await Promise.all([getLetter(id), getViewer(), getLifeMap()])
@@ -188,7 +191,8 @@ export default function LetterPage() {
           Details
         </SecondaryButton>
       </div>
-      <LetterBody letter={letter} fromName={fromName} showPs={false} />
+      <LetterBody letter={letter} fromName={fromName} showPs={false} highlights={letter.highlights} activeId={highlights.activeId} onOpen={highlights.show} />
+      {highlights.sheet}
 
       {letter.sensitive.mentalHealth && (
         <p className="text-meta mt-10 border-t border-hairline pt-6 text-[14.5px] leading-[1.6]">
@@ -257,9 +261,11 @@ function LetterTitle({ eyebrow, title, sub, seal }: { eyebrow: string; title: st
   )
 }
 
-// P.S. first, then each passage with the recording it came from underneath.
-function LetterBody({ letter, fromName, showPs = true }: { letter: Letter; fromName: string; showPs?: boolean }) {
+// P.S. first, then each passage with the recording it came from underneath. Highlights only when
+// the caller passes onOpen (the reader view).
+function LetterBody({ letter, fromName, showPs = true, ...highlightOptions }: { letter: Letter; fromName: string; showPs?: boolean } & HighlightOptions) {
   const pieceOf = (memoId: string) => letter.pieces.find((p) => p.id === memoId)
+  const body = useHighlightedText(letter.passages.map((p) => p.text), highlightOptions)
   const thumb = <Avatar name={fromName === 'you' ? null : fromName} size={96} />
   return (
     <div className="space-y-6">
@@ -277,7 +283,7 @@ function LetterBody({ letter, fromName, showPs = true }: { letter: Letter; fromN
         const part = letter.pieces.findIndex((x) => x.id === p.memoId) + 1
         return (
           <div key={i} className="space-y-5">
-            {i === 0 ? <DropCapParagraph>{p.text}</DropCapParagraph> : <p className="text-story">{p.text}</p>}
+            {i === 0 ? <DropCapParagraph>{body[i]}</DropCapParagraph> : <p className="text-story">{body[i]}</p>}
             {lastOfPiece && piece?.audioUrl && (
               <AudioCard
                 title={fromName === 'you' ? 'Hear yourself tell it' : `Hear ${fromName} tell it`}

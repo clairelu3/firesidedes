@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router'
 import { formatDuration } from '../lib/format'
 import { useTotalDuration } from '../lib/useDurations'
 import type { Chapter, Envelope, FamilyMember, LifeStage, Memo } from '../types'
+import { useHighlightSheet } from './HighlightSheet'
 import { BottomSheet, SheetFacts, type Detent } from './ui/BottomSheet'
 import { PrimaryButton, SecondaryButton } from './ui/Button'
 import { EnvelopeArt } from './ui/EnvelopeCard'
@@ -17,8 +18,24 @@ import { StoryPassages } from './ui/story'
 const day = (iso: string | undefined) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : '—')
 
 // Family Book: a letter's ⋮ → recorded date, life stage, length; play, transcript, original language.
-export function LetterInfoSheet({ chapter, memos, stage, onClose }: { chapter: Chapter | null; memos: Memo[]; stage?: LifeStage; onClose: () => void }) {
+// The transcript's memory highlights open a second sheet on top of this one.
+export function LetterInfoSheet({
+  chapter,
+  memos,
+  stage,
+  from,
+  showHighlights = false,
+  onClose,
+}: {
+  chapter: Chapter | null
+  memos: Memo[]
+  stage?: LifeStage
+  from?: string // the storyteller's name, for "Hear Ama tell it"
+  showHighlights?: boolean
+  onClose: () => void
+}) {
   const [detent, setDetent] = useState<Detent>('medium')
+  const highlights = useHighlightSheet(from)
   const [showing, setShowing] = useState<'none' | 'transcript' | 'original'>('none')
   const urls = memos.map((m) => m.audioUrl).filter(Boolean)
   const total = useTotalDuration(urls)
@@ -31,54 +48,57 @@ export function LetterInfoSheet({ chapter, memos, stage, onClose }: { chapter: C
   }
 
   return (
-    <BottomSheet
-      open={!!chapter}
-      onClose={() => {
-        setShowing('none')
-        setDetent('medium')
-        onClose()
-      }}
-      title={chapter?.title ?? ''}
-      detent={detent}
-      onDetentChange={setDetent}
-    >
-      {chapter && (
-        <div className="space-y-4">
-          <SheetFacts
-            items={[
-              { label: 'Recorded', value: day(memos[0]?.createdAt) },
-              { label: 'Life stage', value: stage?.label ?? '—' },
-              { label: 'Length', value: total ? formatDuration(total) : '—' },
-              ...(memos.length > 1 ? [{ label: 'Parts', value: String(memos.length) }] : []),
-            ]}
-          />
-          <ListenButton urls={urls} label="Play from the start" />
-          <SecondaryButton icon={<BookOpen size={18} strokeWidth={1.5} aria-hidden="true" />} onClick={() => (showing === 'transcript' ? setShowing('none') : show('transcript'))}>
-            {showing === 'transcript' ? 'Hide the transcript' : 'Read the transcript'}
-          </SecondaryButton>
-          {originals.length > 0 && (
-            <SecondaryButton icon={<Languages size={18} strokeWidth={1.5} aria-hidden="true" />} onClick={() => (showing === 'original' ? setShowing('none') : show('original'))}>
-              {showing === 'original' ? 'Hide the original language' : 'Hear in original language'}
+    <>
+      <BottomSheet
+        open={!!chapter}
+        onClose={() => {
+          setShowing('none')
+          setDetent('medium')
+          onClose()
+        }}
+        title={chapter?.title ?? ''}
+        detent={detent}
+        onDetentChange={setDetent}
+      >
+        {chapter && (
+          <div className="space-y-4">
+            <SheetFacts
+              items={[
+                { label: 'Recorded', value: day(memos[0]?.createdAt) },
+                { label: 'Life stage', value: stage?.label ?? '—' },
+                { label: 'Length', value: total ? formatDuration(total) : '—' },
+                ...(memos.length > 1 ? [{ label: 'Parts', value: String(memos.length) }] : []),
+              ]}
+            />
+            <ListenButton urls={urls} label="Play from the start" />
+            <SecondaryButton icon={<BookOpen size={18} strokeWidth={1.5} aria-hidden="true" />} onClick={() => (showing === 'transcript' ? setShowing('none') : show('transcript'))}>
+              {showing === 'transcript' ? 'Hide the transcript' : 'Read the transcript'}
             </SecondaryButton>
-          )}
-          {showing === 'transcript' && (
-            <div className="pt-2">
-              <StoryPassages passages={chapter.passages} />
-            </div>
-          )}
-          {showing === 'original' && (
-            <div className="space-y-4 pt-2">
-              {originals.map((m) => (
-                <div key={m.id}>
-                  <p className="text-eyebrow">{m.tags?.language}</p>
-                  <p className="text-story mt-1">{m.transcript}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </BottomSheet>
+            {originals.length > 0 && (
+              <SecondaryButton icon={<Languages size={18} strokeWidth={1.5} aria-hidden="true" />} onClick={() => (showing === 'original' ? setShowing('none') : show('original'))}>
+                {showing === 'original' ? 'Hide the original language' : 'Hear in original language'}
+              </SecondaryButton>
+            )}
+            {showing === 'transcript' && (
+              <div className="pt-2">
+                <StoryPassages passages={chapter.passages} highlights={chapter.highlights} activeId={highlights.activeId} onOpen={showHighlights ? highlights.show : undefined} />
+              </div>
+            )}
+            {showing === 'original' && (
+              <div className="space-y-4 pt-2">
+                {originals.map((m) => (
+                  <div key={m.id}>
+                    <p className="text-eyebrow">{m.tags?.language}</p>
+                    <p className="text-story mt-1">{m.transcript}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </BottomSheet>
+      {highlights.sheet}
+    </>
   )
 }
 

@@ -1,7 +1,7 @@
 import { Check, Clock, EyeOff, MapPin, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getLifeMap, getMyName, listChapters, listMemos, updateChapter } from '../api'
-import { HighlightSheet } from '../components/HighlightSheet'
+import { useHighlightSheet } from '../components/HighlightSheet'
 import { AppShell } from '../components/ui/AppShell'
 import { AudioCard } from '../components/ui/AudioCard'
 import { PrimaryButton, SecondaryButton, TextButton } from '../components/ui/Button'
@@ -14,7 +14,8 @@ import { Pager } from '../components/ui/Pager'
 import { Divider, StoryPassages } from '../components/ui/story'
 import { firstName, readMinutes, startYear } from '../lib/format'
 import { sealFor } from '../lib/illustrations'
-import type { Chapter, Highlight, LifeStage, Memo } from '../types'
+import { useIsStoryteller } from '../lib/useViewer'
+import type { Chapter, LifeStage, Memo } from '../types'
 
 const REVIEW_PANEL_HEIGHT = 128
 
@@ -33,7 +34,9 @@ export default function Chapters() {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
-  const [highlight, setHighlight] = useState<Highlight | null>(null)
+  // Highlights are for the family; the storyteller reviews plain text.
+  const isStoryteller = useIsStoryteller()
+  const highlights = useHighlightSheet(firstName(name) || undefined)
 
   useEffect(() => {
     Promise.all([listChapters(), getLifeMap(), listMemos()])
@@ -125,7 +128,7 @@ export default function Chapters() {
     <AppShell
       subtitle="Review"
       floatingHeight={REVIEW_PANEL_HEIGHT}
-      floatingHidden={!!highlight}
+      floatingHidden={highlights.isOpen}
       floating={
         <div className="surface-card p-4">
           <p className="text-center font-serif text-[17px] text-ink">Does this feel true to your memory?</p>
@@ -190,7 +193,12 @@ export default function Chapters() {
             ))}
           </div>
         ) : (
-          <StoryPassages passages={chapter.passages} highlights={chapter.highlights} activeHighlightId={highlight?.id} onHighlight={setHighlight} />
+          <StoryPassages
+            passages={chapter.passages}
+            highlights={chapter.highlights}
+            activeId={highlights.activeId}
+            onOpen={isStoryteller === false ? highlights.show : undefined}
+          />
         )}
 
         {audioUrls.length > 0 && (
@@ -200,7 +208,7 @@ export default function Chapters() {
 
       {error && <Notice tone="error" className="mt-4">We couldn’t load everything. Refresh to try again.</Notice>}
 
-      <HighlightSheet highlight={highlight} from={first || undefined} onClose={() => setHighlight(null)} />
+      {highlights.sheet}
     </AppShell>
   )
 }

@@ -57,6 +57,9 @@ function letter(l: Partial<Letter> & Pick<Letter, 'id' | 'title' | 'createdAt' |
   }
 }
 
+// A stretch of a seeded recording for a highlight: seconds into the piece's audio in public/demo/.
+const clip = (id: string, start: number, duration: number) => ({ url: `/demo/${id}.m4a`, start, duration })
+
 export const seedLetters: Letter[] = [
   letter({
     id: 'l-courtyard',
@@ -134,6 +137,30 @@ export const seedLetters: Letter[] = [
       piece('pb4', '2026-10-05T18:09:00Z', 'Later I understood that he wasn’t shouting at my uncle. He was telling him to get down.'),
     ],
     psPieces: [piece('psB1', '2026-10-05T18:12:00Z', 'I waited until you were grown, Lily, so you would know he was a good man that the war hurt. Not just a man who drank.', 'why')],
+    // Readers only reach these once the letter opens on her birthday (getLetter gates the text).
+    highlights: [
+      {
+        id: 'h-suitcase',
+        phrase: 'a suitcase',
+        title: 'The suitcase',
+        detail: 'He kept his army things in it. That night it was empty when he left and full of bottles when he came back.',
+        audioClip: clip('pb1', 0, 6.5),
+      },
+      {
+        id: 'h-uncle',
+        phrase: 'my uncle',
+        title: 'Her uncle',
+        detail: 'Ama’s uncle, her father’s younger brother. They enlisted together. Only one came home.',
+        audioClip: clip('pb2', 0, 7.2),
+      },
+      {
+        id: 'h-get-down',
+        phrase: 'get down',
+        title: '“Get down”',
+        detail: 'What soldiers shouted when shelling started. Ama heard it many nights after that.',
+        audioClip: clip('pb4', 0, 5.2),
+      },
+    ],
   }),
   letter({
     id: 'l-private',
@@ -151,9 +178,7 @@ export const seedLetters: Letter[] = [
   }),
 ]
 
-// Memory highlights for readers, keyed by chapter id. Each phrase appears in that chapter's text;
-// clip times are seconds into the piece's recording in public/demo/.
-const clip = (id: string, start: number, duration: number) => ({ url: `/demo/${id}.m4a`, start, duration })
+// Memory highlights for readers, keyed by chapter id. Each phrase appears in that chapter's text.
 
 export const seedHighlights: Record<string, Highlight[]> = {
   'c-1': [

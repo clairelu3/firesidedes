@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from 'react'
+import { useMemo, type KeyboardEvent, type ReactNode } from 'react'
 import type { Highlight, Passage } from '../../types'
 
 export function Diamond({ className = '' }: { className?: string }) {
@@ -52,9 +52,8 @@ function phrasePattern(phrase: string) {
   return new RegExp(parts.join('\\s+'), 'gi')
 }
 
-// Where each highlight lands: its first occurrence across the passages that doesn't overlap
-// another. The drop-cap paragraph never matches at index 0, so the drop cap stays plain text.
-function placeHighlights(texts: string[], highlights: Highlight[], dropCap: number): Mark[][] {
+// Where each highlight lands: its first occurrence across the texts that doesn't overlap another.
+function placeHighlights(texts: string[], highlights: Highlight[]): Mark[][] {
   const marks: Mark[][] = texts.map(() => [])
   for (const highlight of highlights) {
     if (!highlight.phrase.trim()) continue
@@ -64,7 +63,6 @@ function placeHighlights(texts: string[], highlights: Highlight[], dropCap: numb
       for (let m = re.exec(texts[i]!); m; m = re.exec(texts[i]!)) {
         const start = m.index
         const end = start + m[0].length
-        if (i === dropCap && start === 0) continue
         if (marks[i]!.some((k) => start < k.end && end > k.start)) continue
         marks[i]!.push({ start, end, highlight })
         break search
@@ -75,7 +73,7 @@ function placeHighlights(texts: string[], highlights: Highlight[], dropCap: numb
   return marks
 }
 
-function HighlightedText({ text, marks, activeId, onOpen }: { text: string; marks: Mark[]; activeId?: string; onOpen: (h: Highlight) => void }) {
+function withHighlights(text: string, marks: Mark[], onOpen: (h: Highlight) => void, activeId?: string): ReactNode {
   if (!marks.length) return text
   const out: ReactNode[] = []
   let at = 0
@@ -87,7 +85,8 @@ function HighlightedText({ text, marks, activeId, onOpen }: { text: string; mark
         onOpen(highlight)
       }
     }
-    // A span (not <button>) so a multi-word phrase can wrap across lines like the rest of the text.
+    // An inline span (not <button>) so a multi-word phrase wraps like the rest of the text, and a
+    // drop cap's ::first-letter still reaches into it when the phrase starts the paragraph.
     out.push(
       <span
         key={highlight.id}
@@ -108,31 +107,32 @@ function HighlightedText({ text, marks, activeId, onOpen }: { text: string; mark
   return out
 }
 
-// Passages as book text: drop cap on the first paragraph, quotations as pull quotes.
-// With highlights, the first occurrence of each phrase becomes tappable (onHighlight opens it).
-export function StoryPassages({
-  passages,
-  quoteAlign = 'left',
-  highlights,
-  activeHighlightId,
-  onHighlight,
-}: {
-  passages: Passage[]
-  quoteAlign?: 'left' | 'center'
+export type HighlightOptions = {
   highlights?: Highlight[]
-  activeHighlightId?: string
-  onHighlight?: (highlight: Highlight) => void
-}) {
+  activeId?: string // the highlight whose sheet is open, shown tinted
+  onOpen?: (highlight: Highlight) => void // leave out (e.g. for the storyteller) to render plain text
+}
+
+// The one place story text becomes tappable highlights: Review, the Family Book and the letter
+// reader all render through this. Returns each text as nodes, the first occurrence of each phrase
+// (across all the texts) wrapped in a jade button. Without onOpen or highlights it's plain text.
+export function useHighlightedText(texts: string[], { highlights, activeId, onOpen }: HighlightOptions): ReactNode[] {
+  const key = texts.join('\u0000')
+  const enabled = !!onOpen
+  const marks = useMemo(() => (highlights?.length && enabled ? placeHighlights(key.split('\u0000'), highlights) : null), [key, highlights, enabled])
+  return texts.map((text, i) => (marks && onOpen ? withHighlights(text, marks[i] ?? [], onOpen, activeId) : text))
+}
+
+// Passages as book text: drop cap on the first paragraph, quotations as pull quotes.
+export function StoryPassages({ passages, quoteAlign = 'left', ...highlightOptions }: { passages: Passage[]; quoteAlign?: 'left' | 'center' } & HighlightOptions) {
   const texts = passages.map((p) => (isQuotation(p.text) ? p.text.trim() : p.text))
-  const dropCap = isQuotation(passages[0]?.text ?? '') ? -1 : 0
-  const marks = highlights?.length && onHighlight ? placeHighlights(texts, highlights, dropCap) : texts.map(() => [])
-  const body = (i: number) => <HighlightedText text={texts[i]!} marks={marks[i]!} activeId={activeHighlightId} onOpen={(h) => onHighlight?.(h)} />
+  const body = useHighlightedText(texts, highlightOptions)
   return (
     <div className="space-y-5">
       {passages.map((p, i) => {
-        if (isQuotation(p.text)) return <PullQuote key={i} align={quoteAlign}>{body(i)}</PullQuote>
-        if (i === 0) return <DropCapParagraph key={i}>{body(i)}</DropCapParagraph>
-        return <p key={i} className="text-story">{body(i)}</p>
+        if (isQuotation(p.text)) return <PullQuote key={i} align={quoteAlign}>{body[i]}</PullQuote>
+        if (i === 0) return <DropCapParagraph key={i}>{body[i]}</DropCapParagraph>
+        return <p key={i} className="text-story">{body[i]}</p>
       })}
     </div>
   )

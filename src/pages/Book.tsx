@@ -168,6 +168,8 @@ export default function Book() {
         chapter={sheetChapter}
         memos={sheetChapter ? memosFor(sheetChapter) : []}
         stage={stages.find((s) => s.id === sheetChapter?.stageId)}
+        from={fromName || undefined}
+        showHighlights={isStoryteller === false}
         onClose={() => setSheetChapter(null)}
       />
       <EnvelopeSheet envelope={sheetEnvelope} onClose={() => setSheetEnvelope(null)} />

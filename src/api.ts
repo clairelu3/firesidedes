@@ -715,6 +715,7 @@ type LetterRow = {
   passages: Passage[] | null
   opened_at: Record<string, string> | null
   chapter_id: number | null
+  highlights?: unknown // optional jsonb column
 }
 type LetterReplyRow = { id: string; family_code: string; letter_id: string; member_id: string; member_name: string | null; audio_url: string | null; created_at: string }
 
@@ -740,6 +741,7 @@ function toLetter(row: LetterRow): Letter {
     passages: row.passages ?? [],
     openedAt: row.opened_at ?? {},
     chapterId: row.chapter_id == null ? undefined : String(row.chapter_id),
+    highlights: toHighlights(row.highlights),
   })
 }
 
@@ -1334,7 +1336,7 @@ export async function getLetterShelf(): Promise<LetterShelf> {
       .filter((l) => l.openedAt[me.id] && isOpenable(l, me.id, ctx.members))
       .map(async (l) => {
         const shown = await presentForReader(l, ctx.people)
-        return { id: `letter-${l.id}`, title: shown.title, stageId: l.stageId ?? '', passages: shown.passages, status: 'approved' as const, letterId: l.id }
+        return { id: `letter-${l.id}`, title: shown.title, stageId: l.stageId ?? '', passages: shown.passages, status: 'approved' as const, letterId: l.id, highlights: l.highlights }
       }),
   )
   shelf.waitingForOthers = sealed.filter((l) => !isRecipient(l, me.id, ctx.members)).length

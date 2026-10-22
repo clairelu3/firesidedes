@@ -2,7 +2,7 @@
 // Recorded audio is too big for localStorage (~5MB), so blobs go to IndexedDB and
 // letters store "idb:<key>" in place of a URL; api.ts turns those into object URLs.
 // Every storage access is wrapped: in a private window the demo still works for the session.
-import type { Chapter, Family, FamilyMember, Letter, LetterReply, LifeMap, Memo } from '../types'
+import type { Chapter, Family, FamilyMember, Highlight, Letter, LetterReply, LifeMap, Memo } from '../types'
 import { withKnownRelease } from './legacyRelease'
 import { DEMO_FAMILY_CODE, seedChapters, seedFamily, seedHighlights, seedLetters, seedLifeMap, seedMembers, seedReplies } from './demoSeed'
 
@@ -42,9 +42,13 @@ function load(): DemoState {
     if (raw) {
       const parsed = JSON.parse(raw) as DemoState
       // Saved letters may still use a release mode that no longer exists; see legacyRelease.ts.
-      // Chapters saved before highlights existed get the seed's, so the demo shows them without a reset.
+      // Chapters and letters saved before highlights existed get the seed's, so the demo shows them without a reset.
       if (parsed.version === VERSION)
-        return { ...parsed, letters: parsed.letters.map(withKnownRelease), chapters: parsed.chapters.map(withSeedHighlights) }
+        return {
+          ...parsed,
+          letters: parsed.letters.map((l) => withSeedHighlights(withKnownRelease(l), seedLetters.find((s) => s.id === l.id)?.highlights)),
+          chapters: parsed.chapters.map((c) => withSeedHighlights(c, seedHighlights[c.id])),
+        }
     }
   } catch {
     // Unreadable or blocked storage: start from the seed.
@@ -52,9 +56,8 @@ function load(): DemoState {
   return seed()
 }
 
-function withSeedHighlights(chapter: Chapter): Chapter {
-  const highlights = seedHighlights[chapter.id]
-  return chapter.highlights || !highlights ? chapter : { ...chapter, highlights: structuredClone(highlights) }
+function withSeedHighlights<T extends Chapter | Letter>(item: T, highlights: Highlight[] | undefined): T {
+  return item.highlights || !highlights ? item : { ...item, highlights: structuredClone(highlights) }
 }
 
 let state = load()

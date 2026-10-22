@@ -12,6 +12,10 @@ const DURATION = 300
 const SNAP = 60 // px of drag that changes detent
 const TAP = 6 // px of movement still counted as a tap on the handle
 const INTERACTIVE = 'button, a, input, textarea, select, [role="button"]'
+
+// Open sheets, oldest first. A sheet can open over another (a highlight from a transcript);
+// only the top one answers Escape and traps Tab.
+const openSheets: string[] = []
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select, [tabindex]:not([tabindex="-1"])'
 
 type Props = {
@@ -61,10 +65,20 @@ export function BottomSheet({ open, onClose, title, children, detent: controlled
     return () => returnFocus.current?.focus?.()
   }, [mounted])
 
+  // Join the stack while open (keyed only on open, so re-renders don't reorder it).
+  useEffect(() => {
+    if (!open) return
+    openSheets.push(titleId)
+    return () => {
+      openSheets.splice(openSheets.indexOf(titleId), 1)
+    }
+  }, [open, titleId])
+
   // Escape closes; Tab stays inside the sheet.
   useEffect(() => {
     if (!open) return
     function onKey(e: KeyboardEvent) {
+      if (openSheets.at(-1) !== titleId) return
       if (e.key === 'Escape') {
         e.preventDefault()
         onClose()
@@ -85,7 +99,7 @@ export function BottomSheet({ open, onClose, title, children, detent: controlled
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, onClose, titleId])
 
   if (!mounted) return null
 

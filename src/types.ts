@@ -97,6 +97,7 @@ export type Letter = {
   passages: Passage[] // the letter's chapter text; Passage.memoId is a piece id
   openedAt: Record<string, string> // member id -> ISO time
   chapterId?: string // draft/approved chapter for 'now' letters
+  highlights?: Highlight[] // memory highlights readers can tap once the letter is theirs to read
 }
 export type LetterReply = { id: string; letterId: string; memberId: string; memberName: string; audioUrl: string; createdAt: string }
 export type ReleaseChoice = { releaseMode: ReleaseMode; releaseAt?: string; recipients: Recipients }

@@ -1,4 +1,5 @@
-// Family side only: a memory highlight from the story text, opened as a bottom sheet.
+// Family side only (the storyteller's screens stay one step each, with no gesture sheets):
+// a memory highlight from the story text, opened as a bottom sheet.
 // Peeks first (title, year · place, the first line); swipe up, or tap the handle or the hint, for
 // the full detail, a photo and the part of her recording that tells it.
 import { ChevronUp, Pause, Play } from 'lucide-react'
@@ -7,6 +8,18 @@ import { formatDuration } from '../lib/format'
 import type { AudioClip, Highlight } from '../types'
 import { BottomSheet, type Detent } from './ui/BottomSheet'
 import { Waveform } from './ui/AudioCard'
+
+// Highlight state for a screen: pass `show` as useHighlightedText's onOpen (or leave it out for the
+// storyteller), `activeId` to tint the open phrase, `isOpen` to hide sticky bars, and render `sheet`.
+export function useHighlightSheet(from?: string) {
+  const [highlight, setHighlight] = useState<Highlight | null>(null)
+  return {
+    isOpen: highlight !== null,
+    activeId: highlight?.id,
+    show: setHighlight,
+    sheet: <HighlightSheet highlight={highlight} from={from} onClose={() => setHighlight(null)} />,
+  }
+}
 
 const HEIGHTS = { medium: 'max(30dvh, 260px)', large: '85dvh' }
 
